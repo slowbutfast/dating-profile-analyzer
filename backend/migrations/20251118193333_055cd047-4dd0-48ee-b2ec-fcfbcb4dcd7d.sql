@@ -1,0 +1,1 @@
+-- Moved from supabase/migrations/20251118193333_055cd047-4dd0-48ee-b2ec-fcfbcb4dcd7d.sql
