@@ -1,0 +1,111 @@
+import { Router, Request, Response } from 'express';
+import { db } from '../config/firebase';
+
+const router = Router();
+
+// Get all analyses for a user
+router.get('/user/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    const snapshot = await db
+      .collection('analyses')
+      .where('user_id', '==', userId)
+      .orderBy('created_at', 'desc')
+      .get();
+
+    const analyses = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.json({ analyses });
+  } catch (error: any) {
+    console.error('Error fetching analyses:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch analyses' });
+  }
+});
+
+// Get a specific analysis with photos and text responses
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Get analysis document
+    const analysisDoc = await db.collection('analyses').doc(id).get();
+    
+    if (!analysisDoc.exists) {
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
+
+    const analysis = { id: analysisDoc.id, ...analysisDoc.data() };
+
+    // Get photos
+    const photosSnapshot = await db
+      .collection('photos')
+      .where('analysis_id', '==', id)
+      .orderBy('order_index', 'asc')
+      .get();
+
+    const photos = photosSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // Get text responses
+    const textResponsesSnapshot = await db
+      .collection('text_responses')
+      .where('analysis_id', '==', id)
+      .orderBy('created_at', 'asc')
+      .get();
+
+    const textResponses = textResponsesSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.json({
+      analysis,
+      photos,
+      textResponses,
+    });
+  } catch (error: any) {
+    console.error('Error fetching analysis:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch analysis' });
+  }
+});
+
+// Delete an analysis
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Delete analysis document
+    await db.collection('analyses').doc(id).delete();
+
+    // Delete associated photos
+    const photosSnapshot = await db
+      .collection('photos')
+      .where('analysis_id', '==', id)
+      .get();
+
+    const photoDeletePromises = photosSnapshot.docs.map(doc => doc.ref.delete());
+
+    // Delete associated text responses
+    const textResponsesSnapshot = await db
+      .collection('text_responses')
+      .where('analysis_id', '==', id)
+      .get();
+
+    const textResponseDeletePromises = textResponsesSnapshot.docs.map(doc => doc.ref.delete());
+
+    await Promise.all([...photoDeletePromises, ...textResponseDeletePromises]);
+
+    res.json({ success: true, message: 'Analysis deleted successfully' });
+  } catch (error: any) {
+    console.error('Error deleting analysis:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete analysis' });
+  }
+});
+
+export default router;
