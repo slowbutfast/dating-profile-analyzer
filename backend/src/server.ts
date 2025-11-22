@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import analysisRoutes from './routes/analysis';
 import uploadRoutes from './routes/upload';
+import { verifyAuth } from './middleware/auth';
 
 dotenv.config();
 
@@ -17,8 +18,14 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
-app.use('/api/analyses', analysisRoutes);
-app.use('/api/upload', uploadRoutes);
+// Public routes (no auth required)
+app.get('/api/health', (req: Request, res: Response) => {
+  res.json({ status: 'ok', message: 'Backend server is running' });
+});
+
+// Protected routes (auth required)
+app.use('/api/analyses', verifyAuth, analysisRoutes);
+app.use('/api/upload', verifyAuth, uploadRoutes);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {

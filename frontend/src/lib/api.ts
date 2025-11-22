@@ -1,5 +1,57 @@
+import { auth } from '@/integrations/firebase/config';
+
 // API client for backend communication
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+/**
+ * Get Firebase ID token from current user
+ */
+async function getAuthToken(): Promise<string | null> {
+  try {
+    if (auth.currentUser) {
+      return await auth.currentUser.getIdToken();
+    }
+    return null;
+  } catch (error) {
+    console.error('Failed to get auth token:', error);
+    return null;
+  }
+}
+
+/**
+ * Helper to add auth token to request headers
+ */
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  return headers;
+}
+
+/**
+ * Helper for authenticated fetch requests
+ */
+async function authenticatedFetch(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const token = await getAuthToken();
+
+  const headers = {
+    ...getAuthHeaders(),
+    ...(options.headers || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}
 
 export const api = {
   // Upload profile
@@ -8,14 +60,22 @@ export const api = {
     formData.append('userId', userId);
     formData.append('bio', bio);
     formData.append('textResponses', JSON.stringify(textResponses));
-    
+
     photos.forEach((photo) => {
       formData.append('photos', photo);
     });
 
+    const token = await getAuthToken();
+    const headers: Record<string, string> = {};
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}/upload`, {
       method: 'POST',
       body: formData,
+      headers,
     });
 
     if (!response.ok) {
@@ -28,8 +88,8 @@ export const api = {
 
   // Get all analyses for a user
   getUserAnalyses: async (userId: string) => {
-    const response = await fetch(`${API_BASE_URL}/analyses/user/${userId}`);
-    
+    const response = await authenticatedFetch(`${API_BASE_URL}/analyses/user/${userId}`);
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch analyses');
@@ -40,8 +100,8 @@ export const api = {
 
   // Get specific analysis with photos and text responses
   getAnalysis: async (analysisId: string) => {
-    const response = await fetch(`${API_BASE_URL}/analyses/${analysisId}`);
-    
+    const response = await authenticatedFetch(`${API_BASE_URL}/analyses/${analysisId}`);
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to fetch analysis');
@@ -52,10 +112,10 @@ export const api = {
 
   // Delete an analysis
   deleteAnalysis: async (analysisId: string) => {
-    const response = await fetch(`${API_BASE_URL}/analyses/${analysisId}`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/analyses/${analysisId}`, {
       method: 'DELETE',
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.error || 'Failed to delete analysis');
@@ -64,7 +124,7 @@ export const api = {
     return response.json();
   },
 
-  // Health check
+  // Health check (public, no auth needed)
   healthCheck: async () => {
     const response = await fetch(`${API_BASE_URL}/health`);
     return response.json();

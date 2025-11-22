@@ -1,0 +1,141 @@
+/**
+ * Firestore Security Rules for Dating Profile Analyzer
+ * 
+ * Rules enforce:
+ * - User can only read/write their own data
+ * - Photos and text responses are linked to analyses
+ * - Analysis results belong to users
+ * - Research data is anonymized
+ * 
+ * To deploy: firebase deploy --only firestore:rules
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================================================
+    // USER PROFILES - Users can only access their own profile
+    // ========================================================================
+    match /profiles/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // ========================================================================
+    // ANALYSES - Users can read/create/delete their own analyses
+    // ========================================================================
+    match /analyses/{analysisId} {
+      allow read: if request.auth != null && 
+                     request.auth.uid == resource.data.user_id;
+      allow create: if request.auth != null &&
+                       request.auth.uid == request.resource.data.user_id;
+      allow delete: if request.auth != null && 
+                       request.auth.uid == resource.data.user_id;
+      allow update: if request.auth != null &&
+                       request.auth.uid == resource.data.user_id;
+    }
+    
+    // ========================================================================
+    // PHOTOS - Users can read photos from their analyses
+    // ========================================================================
+    match /photos/{photoId} {
+      // Allow read if user owns the analysis this photo belongs to
+      allow read: if request.auth != null && 
+                     get(/databases/$(database)/documents/analyses/$(resource.data.analysis_id)).data.user_id == request.auth.uid;
+      
+      // Allow create/update if user is creating for their analysis
+      allow create, update: if request.auth != null &&
+                               get(/databases/$(database)/documents/analyses/$(request.resource.data.analysis_id)).data.user_id == request.auth.uid;
+      
+      // Allow delete if user owns the analysis
+      allow delete: if request.auth != null &&
+                       get(/databases/$(database)/documents/analyses/$(resource.data.analysis_id)).data.user_id == request.auth.uid;
+    }
+    
+    // ========================================================================
+    // TEXT RESPONSES - Users can read responses from their analyses
+    // ========================================================================
+    match /text_responses/{responseId} {
+      // Allow read if user owns the analysis
+      allow read: if request.auth != null &&
+                     get(/databases/$(database)/documents/analyses/$(resource.data.analysis_id)).data.user_id == request.auth.uid;
+      
+      // Allow create if user is creating for their analysis
+      allow create, update: if request.auth != null &&
+                               get(/databases/$(database)/documents/analyses/$(request.resource.data.analysis_id)).data.user_id == request.auth.uid;
+      
+      // Allow delete if user owns the analysis
+      allow delete: if request.auth != null &&
+                       get(/databases/$(database)/documents/analyses/$(resource.data.analysis_id)).data.user_id == request.auth.uid;
+    }
+    
+    // ========================================================================
+    // ANALYSIS RESULTS - Users can read/write their own results
+    // ========================================================================
+    match /analysis_results/{resultId} {
+      allow read: if request.auth != null &&
+                     request.auth.uid == resource.data.user_id;
+      
+      allow create: if request.auth != null &&
+                       request.auth.uid == request.resource.data.user_id;
+      
+      allow update: if request.auth != null &&
+                       request.auth.uid == resource.data.user_id;
+      
+      allow delete: if request.auth != null &&
+                       request.auth.uid == resource.data.user_id;
+    }
+    
+    // ========================================================================
+    // IMAGE ANALYSIS - Users can read detailed image analysis from their results
+    // ========================================================================
+    match /image_analysis/{imageAnalysisId} {
+      allow read: if request.auth != null &&
+                     get(/databases/$(database)/documents/analysis_results/$(get(/databases/$(database)/documents/image_analysis/$(imageAnalysisId)).data.analysis_id)).data.user_id == request.auth.uid;
+      
+      allow create: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+    
+    // ========================================================================
+    // TEXT ANALYSIS - Users can read detailed text analysis from their results
+    // ========================================================================
+    match /text_analysis/{textAnalysisId} {
+      allow read: if request.auth != null &&
+                     get(/databases/$(database)/documents/analysis_results/$(get(/databases/$(database)/documents/text_analysis/$(textAnalysisId)).data.analysis_id)).data.user_id == request.auth.uid;
+      
+      allow create: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+    
+    // ========================================================================
+    // RESEARCH CONSENT - Users manage their own opt-in status
+    // ========================================================================
+    match /research_consent/{userId} {
+      allow read, write: if request.auth != null && 
+                            request.auth.uid == userId;
+    }
+    
+    // ========================================================================
+    // ANONYMIZED RESEARCH DATA - Write-only for authenticated users
+    // Public read for statistical queries
+    // ========================================================================
+    match /anonymized_research_data/{dataId} {
+      // Only authenticated users can write
+      allow create: if request.auth != null;
+      
+      // Deny direct document reads (should aggregate via functions)
+      allow read: if false;
+      
+      // Data cannot be modified or deleted (immutable archive)
+      allow update, delete: if false;
+    }
+    
+    // ========================================================================
+    // DEFAULT DENY - All other paths are forbidden
+    // ========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -22,7 +22,21 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
     res.json({ analyses });
   } catch (error: any) {
     console.error('Error fetching analyses:', error);
-    res.status(500).json({ error: error.message || 'Failed to fetch analyses' });
+
+    // Detect Firestore "requires an index" error and return a helpful payload
+    const msg = error?.message || String(error);
+    if (msg && /requires an index/i.test(msg)) {
+      const urlMatch = msg.match(/https?:\/\/[^\s)]+/);
+      const indexUrl = urlMatch ? urlMatch[0] : null;
+
+      return res.status(412).json({
+        error: 'Query requires a Firestore index',
+        details: msg,
+        createIndexUrl: indexUrl,
+      });
+    }
+
+    res.status(500).json({ error: msg || 'Failed to fetch analyses' });
   }
 });
 
