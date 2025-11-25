@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
+import { db } from '@/integrations/firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
+import Onboarding from './Onboarding';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,8 +32,29 @@ const Upload = () => {
   const [bio, setBio] = useState('');
   const [textResponses, setTextResponses] = useState<{ question: string; answer: string }[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [hasPersonalityProfile, setHasPersonalityProfile] = useState<boolean | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [pendingUpload, setPendingUpload] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Check if user has completed personality onboarding
+  useEffect(() => {
+    const checkPersonalityProfile = async () => {
+      if (!user) return;
+      
+      try {
+        const personalityRef = doc(db, 'user_personalities', user.uid);
+        const personalityDoc = await getDoc(personalityRef);
+        setHasPersonalityProfile(personalityDoc.exists());
+      } catch (error) {
+        console.error('Error checking personality profile:', error);
+        setHasPersonalityProfile(false);
+      }
+    };
+
+    checkPersonalityProfile();
+  }, [user]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -88,6 +112,51 @@ const Upload = () => {
     setTextResponses(updated);
   };
 
+  const performUpload = async (filteredResponses: any[]) => {
+    if (!user) return;
+    
+    setUploading(true);
+    try {
+      const result = await api.upload(user.uid, photos, bio.trim(), filteredResponses);
+
+      toast({
+        title: 'Upload successful!',
+        description: 'Your profile is being analyzed. This may take a few minutes.',
+      });
+
+      navigate(`/results/${result.analysisId}`);
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: 'Upload failed',
+        description: error.message || 'Please try again',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
+      setPendingUpload(false);
+    }
+  };
+
+  const handleOnboardingComplete = async () => {
+    setShowOnboarding(false);
+    setHasPersonalityProfile(true);
+    
+    if (pendingUpload) {
+      const filteredResponses = textResponses.filter(tr => tr.question.trim() || tr.answer.trim());
+      await performUpload(filteredResponses);
+    }
+  };
+
+  const handleOnboardingSkip = async () => {
+    setShowOnboarding(false);
+    
+    if (pendingUpload) {
+      const filteredResponses = textResponses.filter(tr => tr.question.trim() || tr.answer.trim());
+      await performUpload(filteredResponses);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -103,15 +172,22 @@ const Upload = () => {
         textResponses: filteredResponses.length > 0 ? filteredResponses : undefined,
       });
 
+      // Check if user has completed personality onboarding
+      if (hasPersonalityProfile === false) {
+        toast({
+          title: 'One more step!',
+          description: 'Please complete your personality profile for more personalized insights.',
+        });
+        
+        // Open onboarding dialog and mark upload as pending
+        setPendingUpload(true);
+        setShowOnboarding(true);
+        setUploading(false);
+        return;
+      }
+
       // Upload to backend API
-      const result = await api.upload(user.uid, photos, bio.trim(), filteredResponses);
-
-      toast({
-        title: 'Upload successful!',
-        description: 'Your profile is being analyzed. This may take a few minutes.',
-      });
-
-      navigate(`/results/${result.analysisId}`);
+      await performUpload(filteredResponses);
     } catch (error: any) {
       if (error instanceof z.ZodError) {
         toast({
@@ -147,7 +223,7 @@ const Upload = () => {
           <CardHeader>
             <CardTitle aria-label="Profile photos title">Profile Photos</CardTitle>
             <CardDescription aria-label="Profile photos description">
-              Upload 1-10 photos from your dating profile. Accepted formats: JPG, PNG, WebP (max 10MB each)
+              Upload 3-10 photos from your dating profile. Accepted formats: JPG, PNG, WebP (max 10MB each)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -271,6 +347,13 @@ const Upload = () => {
           </Button>
         </div>
       </form>
+
+      {/* Onboarding Modal */}
+      <Onboarding
+        open={showOnboarding}
+        onComplete={handleOnboardingComplete}
+        onSkip={handleOnboardingSkip}
+      />
     </div>
   );
 };
