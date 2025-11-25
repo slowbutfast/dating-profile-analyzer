@@ -133,27 +133,27 @@ const Upload = () => {
   };
 
   return (
-    <div className="container max-w-4xl mx-auto py-10">
+    <div className="container max-w-4xl mx-auto py-10" aria-label="Upload profile page">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Upload Your Profile</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-3xl font-bold mb-2" aria-label="Upload title">Upload Your Profile</h1>
+        <p className="text-muted-foreground" aria-label="Upload description">
           Upload your dating profile photos, bio, and optional text responses to get an AI-powered analysis.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-8" aria-label="Upload form">
         {/* Photo Upload Section */}
-        <Card>
+        <Card aria-label="Profile photos card">
           <CardHeader>
-            <CardTitle>Profile Photos</CardTitle>
-            <CardDescription>
+            <CardTitle aria-label="Profile photos title">Profile Photos</CardTitle>
+            <CardDescription aria-label="Profile photos description">
               Upload 1-10 photos from your dating profile. Accepted formats: JPG, PNG, WebP (max 10MB each)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4" aria-label="Uploaded photos grid">
               {photos.map((photo, index) => (
-                <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
+                <div key={index} className="relative aspect-square rounded-lg overflow-hidden border" aria-label={`Uploaded photo ${index + 1}`}>
                   <img
                     src={URL.createObjectURL(photo)}
                     alt={`Upload ${index + 1}`}
@@ -165,6 +165,7 @@ const Upload = () => {
                     size="icon"
                     className="absolute top-2 right-2"
                     onClick={() => removePhoto(index)}
+                    aria-label={`Remove photo ${index + 1}`}
                   >
                     ×
                   </Button>
@@ -172,7 +173,7 @@ const Upload = () => {
               ))}
               
               {photos.length < 10 && (
-                <label className="aspect-square rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
+                <label className="aspect-square rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors" aria-label="Add photo">
                   <div className="text-center">
                     <span className="text-4xl">+</span>
                     <p className="text-sm text-muted-foreground mt-2">Add Photo</p>
@@ -183,6 +184,7 @@ const Upload = () => {
                     multiple
                     onChange={handlePhotoChange}
                     className="hidden"
+                    aria-label="Photo file input"
                   />
                 </label>
               )}
@@ -191,10 +193,10 @@ const Upload = () => {
         </Card>
 
         {/* Bio Section */}
-        <Card>
+        <Card aria-label="Bio card">
           <CardHeader>
-            <CardTitle>Bio</CardTitle>
-            <CardDescription>
+            <CardTitle aria-label="Bio title">Bio</CardTitle>
+            <CardDescription aria-label="Bio description">
               Paste your dating profile bio or description
             </CardDescription>
           </CardHeader>
@@ -204,28 +206,30 @@ const Upload = () => {
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               className="min-h-[200px]"
+              aria-label="Profile bio textarea"
             />
           </CardContent>
         </Card>
 
         {/* Text Responses Section */}
-        <Card>
+        <Card aria-label="Text responses card">
           <CardHeader>
-            <CardTitle>Text Responses (Optional)</CardTitle>
-            <CardDescription>
+            <CardTitle aria-label="Text responses title">Text Responses (Optional)</CardTitle>
+            <CardDescription aria-label="Text responses description">
               Add prompt questions and your responses from your profile (e.g., "What I'm looking for", "My perfect Sunday")
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {textResponses.map((response, index) => (
-              <div key={index} className="space-y-2 p-4 border rounded-lg">
+              <div key={index} className="space-y-2 p-4 border rounded-lg" aria-label={`Text response ${index + 1}`}>
                 <div className="flex justify-between items-start">
-                  <Label>Response {index + 1}</Label>
+                  <Label aria-label={`Response ${index + 1} label`}>Response {index + 1}</Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => removeTextResponse(index)}
+                    aria-label={`Remove response ${index + 1}`}
                   >
                     Remove
                   </Button>
@@ -234,12 +238,14 @@ const Upload = () => {
                   placeholder="Question/Prompt"
                   value={response.question}
                   onChange={(e) => updateTextResponse(index, 'question', e.target.value)}
+                  aria-label={`Response ${index + 1} question input`}
                 />
                 <Textarea
                   placeholder="Your answer"
                   value={response.answer}
                   onChange={(e) => updateTextResponse(index, 'answer', e.target.value)}
                   className="min-h-[100px]"
+                  aria-label={`Response ${index + 1} answer input`}
                 />
               </div>
             ))}
@@ -250,6 +256,7 @@ const Upload = () => {
                 variant="outline"
                 onClick={addTextResponse}
                 className="w-full"
+                aria-label="Add text response"
               >
                 + Add Text Response
               </Button>
@@ -258,8 +265,8 @@ const Upload = () => {
         </Card>
 
         {/* Submit Button */}
-        <div className="flex justify-end">
-          <Button type="submit" disabled={uploading} size="lg">
+        <div className="flex justify-end" aria-label="Submit area">
+          <Button type="submit" disabled={uploading} size="lg" aria-label="Analyze my profile">
             {uploading ? 'Uploading...' : 'Analyze My Profile'}
           </Button>
         </div>
