@@ -108,12 +108,12 @@ const Results = () => {
   };
 
   const renderMetricScore = (label: string, score: number, description?: string) => (
-    <div className="space-y-2">
+    <div className="space-y-2" role="group" aria-label={`${label} score`}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium">{label}</span>
         <span className="text-sm font-bold">{score}/100</span>
       </div>
-      <Progress value={score} className="h-2" />
+      <Progress value={score} className="h-2" aria-valuenow={score} aria-label={`${label} progress`} />
       {description && (
         <p className="text-xs text-muted-foreground">{description}</p>
       )}
@@ -122,7 +122,7 @@ const Results = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite" aria-label="Loading analysis">
         <div className="text-center">
           <p className="text-muted-foreground">Loading analysis...</p>
         </div>
@@ -133,7 +133,7 @@ const Results = () => {
   // Demo results content
   if (!analysis) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" role="main" aria-label="Demo results">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Demo Results</h2>
           <p className="text-muted-foreground mb-4">Supabase is disabled. This is a demo view.</p>
@@ -143,7 +143,7 @@ const Results = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
+    <div className="min-h-screen bg-background relative overflow-hidden" role="main" aria-label="Profile analysis results">
       {/* Background Elements */}
       <div className="fixed inset-0 -z-10">
         <div className="absolute inset-0" style={{ background: 'var(--gradient-mesh)' }} />
@@ -153,7 +153,7 @@ const Results = () => {
       
       <div className="container mx-auto px-4 py-8 max-w-6xl relative">
         <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" onClick={() => navigate('/')}>
+          <Button variant="ghost" onClick={() => navigate('/')} aria-label="Back to Dashboard">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
@@ -162,7 +162,7 @@ const Results = () => {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold">Profile Analysis</h1>
+            <h1 className="text-3xl font-bold" aria-label="Profile Analysis title">Profile Analysis</h1>
             <Badge 
               variant={analysis.status === 'completed' ? 'default' : 'secondary'}
               className={
@@ -170,18 +170,19 @@ const Results = () => {
                 analysis.status === 'processing' ? 'bg-blue-500' :
                 analysis.status === 'failed' ? 'bg-red-500' : ''
               }
+              aria-label={`Analysis status: ${analysis.status}`}
             >
               {analysis.status}
             </Badge>
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground" aria-label="Analysis creation date">
             Created on {new Date(analysis.created_at).toLocaleDateString()}
           </p>
         </div>
 
         {/* Processing Status */}
         {(analysis.status === 'pending' || analysis.status === 'processing') && (
-          <Card className="mb-8">
+          <Card className="mb-8" role="status" aria-live="polite" aria-label="Analysis processing status">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -198,7 +199,7 @@ const Results = () => {
 
         {/* Failed Status */}
         {analysis.status === 'failed' && (
-          <Card className="mb-8 border-destructive">
+          <Card className="mb-8 border-destructive" role="alert" aria-label="Analysis failed">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <XCircle className="w-8 h-8 text-destructive" />
@@ -215,10 +216,10 @@ const Results = () => {
 
         {/* Photo Analysis */}
         {photos.length > 0 && (
-          <Card className="mb-8">
+          <Card className="mb-8" aria-label="Photo analysis section">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ImageIcon className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2" aria-label="Photo Analysis title">
+                <ImageIcon className="w-5 h-5" aria-hidden />
                 Photo Analysis
               </CardTitle>
               <CardDescription>
@@ -228,7 +229,7 @@ const Results = () => {
             <CardContent>
               <div className="grid gap-6">
                 {photos.map((photo, index) => (
-                  <div key={photo.id} className="space-y-4">
+                  <div key={photo.id} className="space-y-4" aria-label={`Photo ${index + 1} analysis`}>
                     <div className="flex items-start gap-4">
                       <div className="w-32 h-32 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                         <img
@@ -271,10 +272,10 @@ const Results = () => {
 
         {/* Text Analysis */}
         {textResponses.length > 0 && (
-          <Card>
+          <Card aria-label="Text analysis section">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2" aria-label="Text Analysis title">
+                <MessageSquare className="w-5 h-5" aria-hidden />
                 Text Analysis
               </CardTitle>
               <CardDescription>
@@ -284,15 +285,15 @@ const Results = () => {
             <CardContent>
               <div className="space-y-6">
                 {textResponses.map((response, index) => (
-                  <div key={response.id} className="space-y-4">
+                  <div key={response.id} className="space-y-4" aria-label={`Response ${index + 1} analysis`}>
                     <div className="space-y-2">
                       <h4 className="font-semibold">{response.question}</h4>
-                      <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                      <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg" aria-label={`Answer to question ${index + 1}`}>
                         "{response.answer}"
                       </p>
                     </div>
                     {response.analysis_result && analysis.status === 'completed' ? (
-                      <div className="space-y-3 pl-4 border-l-2 border-primary/20">
+                      <div className="space-y-3 pl-4 border-l-2 border-primary/20" aria-label={`Analysis metrics for response ${index + 1}`}>
                         {renderMetricScore('Warmth', response.analysis_result.warmth || 0)}
                         {renderMetricScore('Humor', response.analysis_result.humor || 0)}
                         {renderMetricScore('Clarity', response.analysis_result.clarity || 0)}
@@ -327,7 +328,7 @@ const Results = () => {
         )}
 
         {analysis.status === 'completed' && (
-          <Card className="mt-8 bg-primary/5 border-primary/20">
+          <Card className="mt-8 bg-primary/5 border-primary/20" role="status" aria-live="polite" aria-label="Analysis complete">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <CheckCircle className="w-6 h-6 text-primary flex-shrink-0 mt-1" />
