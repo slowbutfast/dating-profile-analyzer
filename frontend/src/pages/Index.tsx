@@ -4,16 +4,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, Camera, MessageSquare, BarChart3, ArrowRight } from 'lucide-react';
+import { HeroGeometric } from '@/components/ui/shape-landing-hero';
+import { motion } from 'framer-motion';
 
 const Index = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading && user) {
-      navigate('/dashboard');
-    }
-  }, [user, loading, navigate]);
+  // Note: Removed auto-redirect so logged-in users can view the landing page
+  // They can navigate to dashboard via the nav button
 
   if (loading) {
     return (
@@ -24,37 +23,69 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-primary/5">
-      {/* Navigation */}
-      <nav className="container mx-auto px-4 py-4 flex justify-end" aria-label="Main navigation">
-        <Button variant="ghost" onClick={() => navigate('/about')} aria-label="About page">
-          About
-        </Button>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center" aria-label="Hero section">
-        <div className="max-w-4xl mx-auto">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-primary/10 mb-6" aria-label="App logo">
-            <Heart className="w-10 h-10 text-primary fill-primary" aria-label="Heart icon" />
-          </div>
-          <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-primary via-primary-light to-primary-dark bg-clip-text text-transparent" aria-label="App title">
-            Dating Profile Analyzer
-          </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto" aria-label="App description">
-            Upload your dating profile photos and prompts to receive data-driven insights and 
-            actionable feedback to improve your matches.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center" aria-label="Call to action buttons">
-            <Button size="lg" onClick={() => navigate('/auth')} className="text-lg px-8" aria-label="Get Started Free">
-              Get Started Free
-              <ArrowRight className="ml-2 w-5 h-5" aria-label="Arrow right icon" />
+    <div className="min-h-screen">
+      {/* Navigation - Positioned over hero */}
+      <nav className="absolute top-0 left-0 right-0 z-20 container mx-auto px-4 py-4 flex justify-between items-center" aria-label="Main navigation">
+        <div className="flex items-center gap-2">
+          <Heart className="w-6 h-6 text-primary fill-primary" />
+          <span className="font-semibold text-lg">Profile Analyzer</span>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => navigate('/about')} aria-label="About page">
+            About
+          </Button>
+          {user ? (
+            <Button onClick={() => navigate('/dashboard')} aria-label="Go to Dashboard">
+              Dashboard
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate('/auth')} aria-label="Sign In">
+          ) : (
+            <Button onClick={() => navigate('/auth')} aria-label="Sign In">
               Sign In
             </Button>
-          </div>
+          )}
         </div>
+      </nav>
+
+      {/* Hero Section with Animation */}
+      <section className="relative" aria-label="Hero section">
+        <HeroGeometric
+          title1="Find Your Best Self"
+          title2="on Dating Apps"
+        />
+        {/* CTA Buttons overlaid on hero */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            duration: 1,
+            delay: 1.1,
+            ease: [0.25, 0.4, 0.25, 1],
+          }}
+          className="absolute bottom-32 left-0 right-0 z-20 flex flex-col sm:flex-row gap-4 justify-center px-4"
+          aria-label="Call to action buttons"
+        >
+          {user ? (
+            <>
+              <Button size="lg" onClick={() => navigate('/upload')} className="text-lg px-8 shadow-lg" aria-label="Upload Profile">
+                Upload Your Profile
+                <ArrowRight className="ml-2 w-5 h-5" aria-label="Arrow right icon" />
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => navigate('/dashboard')} className="shadow-lg bg-background/80 backdrop-blur-sm" aria-label="View Dashboard">
+                View Dashboard
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size="lg" onClick={() => navigate('/auth')} className="text-lg px-8 shadow-lg" aria-label="Get Started Free">
+                Get Started Free
+                <ArrowRight className="ml-2 w-5 h-5" aria-label="Arrow right icon" />
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => navigate('/about')} className="shadow-lg bg-background/80 backdrop-blur-sm" aria-label="Learn More">
+                Learn More
+              </Button>
+            </>
+          )}
+        </motion.div>
       </section>
 
       {/* Features Section */}
