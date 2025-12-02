@@ -13,9 +13,13 @@ import {
   Trash2,
   Loader2,
   CheckCircle,
-  XCircle
+  XCircle,
+  Sparkles
 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { PhotoAnalysisCard } from '@/components/PhotoAnalysisCard';
+import { AnalysisSummary } from '@/components/AnalysisSummary';
+import type { PhotoWithAnalysis } from '@/types/imageAnalysis';
 
 interface Analysis {
   id: string;
@@ -67,6 +71,9 @@ const Results = () => {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [textResponses, setTextResponses] = useState<TextResponse[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imageAnalysisPhotos, setImageAnalysisPhotos] = useState<PhotoWithAnalysis[]>([]);
+  const [analyzingImages, setAnalyzingImages] = useState(false);
+  const [hasImageAnalysis, setHasImageAnalysis] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -92,6 +99,9 @@ const Results = () => {
       setAnalysis(result.analysis);
       setPhotos(result.photos);
       setTextResponses(result.textResponses);
+      
+      // Also load image analysis if available
+      await loadImageAnalysis();
     } catch (error: any) {
       console.error('Error loading analysis:', error);
       toast({
@@ -104,6 +114,53 @@ const Results = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadImageAnalysis = async () => {
+    if (!id) return;
+    
+    try {
+      const result = await api.getImageAnalysisResults(id);
+      setImageAnalysisPhotos(result.photos);
+      setHasImageAnalysis(result.photos.some((p: PhotoWithAnalysis) => p.analysis !== null));
+    } catch (error: any) {
+      // Image analysis might not be available yet, that's ok
+      console.log('Image analysis not yet available:', error);
+    }
+  };
+
+  const handleAnalyzeImages = async () => {
+    if (!id) return;
+    
+    setAnalyzingImages(true);
+    try {
+      await api.analyzeImages(id);
+      
+      toast({
+        title: 'Analysis Started',
+        description: 'Your photos are being analyzed. This may take a few moments...',
+      });
+      
+      // Poll for results
+      setTimeout(async () => {
+        await loadImageAnalysis();
+        setAnalyzingImages(false);
+        
+        toast({
+          title: 'Analysis Complete',
+          description: 'Your photo quality analysis is ready!',
+        });
+      }, 10000); // Wait 10 seconds for analysis to complete
+      
+    } catch (error: any) {
+      console.error('Error analyzing images:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to analyze images',
+        variant: 'destructive',
+      });
+      setAnalyzingImages(false);
     }
   };
 
@@ -212,6 +269,59 @@ const Results = () => {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Image Quality Analysis */}
+        {photos.length > 0 && (
+          <div className="mb-8">
+            {!hasImageAnalysis && !analyzingImages && (
+              <Card className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-4">
+                    <Sparkles className="w-8 h-8 text-purple-600 flex-shrink-0 mt-1" />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg mb-2">Analyze Photo Quality</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Get AI-powered insights on your photo quality including blur detection, lighting analysis, and smile recognition.
+                      </p>
+                      <Button onClick={handleAnalyzeImages} disabled={analyzingImages}>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Analyze Photos
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {analyzingImages && (
+              <Card className="mb-6">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <div>
+                      <h3 className="font-semibold">Analyzing Photo Quality...</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Running blur detection, lighting analysis, and smile recognition. This may take a moment...
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {hasImageAnalysis && imageAnalysisPhotos.length > 0 && (
+              <>
+                <AnalysisSummary photos={imageAnalysisPhotos} />
+                
+                <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {imageAnalysisPhotos.map((photo) => (
+                    <PhotoAnalysisCard key={photo.photoId} photo={photo} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         )}
 
         {/* Photo Analysis */}

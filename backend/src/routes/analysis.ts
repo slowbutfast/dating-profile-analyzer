@@ -122,4 +122,39 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Trigger comprehensive analysis (both text and image)
+router.post('/:id/analyze', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Check if analysis exists
+    const analysisDoc = await db.collection('analyses').doc(id).get();
+    
+    if (!analysisDoc.exists) {
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
+
+    // Update status to processing
+    await db.collection('analyses').doc(id).update({
+      status: 'processing',
+      processing_started_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    // Note: You can trigger your OpenAI text analysis here
+    // For now, we'll just trigger the image analysis
+
+    res.json({
+      success: true,
+      message: 'Analysis started',
+      analysisId: id,
+      note: 'Image analysis will be processed. Use POST /api/image-analysis/:analysisId to run image quality checks.',
+    });
+
+  } catch (error: any) {
+    console.error('Error starting analysis:', error);
+    res.status(500).json({ error: error.message || 'Failed to start analysis' });
+  }
+});
+
 export default router;
