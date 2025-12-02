@@ -7,6 +7,7 @@ analysisRoutes.get('/', (req: Request, res: Response) => {
     res.json({ message: 'Mock analysis route' });
 });
 import uploadRoutes from './routes/upload';
+import imageAnalysisRoutes from './routes/imageAnalysis';
 import { verifyAuth } from './middleware/auth';
 
 dotenv.config();
@@ -16,7 +17,11 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: [process.env.FRONTEND_URL || 'http://localhost:8080', 'http://localhost:8081'],
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:8080',
+    'http://localhost:8081'
+  ],
   credentials: true,
 }));
 app.use(express.json());
@@ -30,6 +35,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 // Protected routes (auth required)
 app.use('/api/analyses', verifyAuth, analysisRoutes);
 app.use('/api/upload', verifyAuth, uploadRoutes);
+app.use('/api/image-analysis', verifyAuth, imageAnalysisRoutes);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {

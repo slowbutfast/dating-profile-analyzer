@@ -124,6 +124,15 @@ const Upload = () => {
         description: 'Your profile is being analyzed. This may take a few minutes.',
       });
 
+      // Automatically trigger image analysis
+      try {
+        await api.analyzeImages(result.analysisId);
+        console.log('Image analysis triggered successfully');
+      } catch (analysisError) {
+        console.error('Failed to trigger image analysis:', analysisError);
+        // Don't block navigation if image analysis fails
+      }
+
       navigate(`/results/${result.analysisId}`);
     } catch (error: any) {
       console.error('Upload error:', error);
