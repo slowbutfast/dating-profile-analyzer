@@ -1,11 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-// Mock analysisRoutes to avoid import errors
-const analysisRoutes = express.Router();
-analysisRoutes.get('/', (req: Request, res: Response) => {
-    res.json({ message: 'Mock analysis route' });
-});
+import path from 'path';
+import analysisRoutes from './routes/analysis';
 import uploadRoutes from './routes/upload';
 import imageAnalysisRoutes from './routes/imageAnalysis';
 import { verifyAuth } from './middleware/auth';
@@ -25,6 +22,9 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// Serve uploaded images statically (no auth required for viewing)
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 // Public routes (no auth required)

@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { db, storage } from '../config/firebase';
+import { db } from '../config/firebase';
 import { analyzeImage, loadModels } from '../utils/imageAnalysis';
 import https from 'https';
 import http from 'http';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const router = Router();
 
@@ -64,9 +66,22 @@ router.post('/:analysisId', async (req: Request, res: Response) => {
       const photoUrl = photoData.photo_url;
 
       try {
-        // Download the image
         console.log(`Analyzing photo ${photoId}...`);
-        const imageBuffer = await downloadImage(photoUrl);
+        
+        // Get image buffer - read from file system or download
+        let imageBuffer: Buffer;
+        
+        if (photoData.storage_path && fs.existsSync(photoData.storage_path)) {
+          // Read from local file system (preferred method)
+          console.log(`Reading from local file: ${photoData.storage_path}`);
+          imageBuffer = fs.readFileSync(photoData.storage_path);
+        } else if (photoUrl.startsWith('http')) {
+          // Fallback to downloading if it's a remote URL
+          console.log(`Downloading from URL: ${photoUrl}`);
+          imageBuffer = await downloadImage(photoUrl);
+        } else {
+          throw new Error('No valid image source found');
+        }
 
         // Run analysis
         const analysis = await analyzeImage(imageBuffer);
