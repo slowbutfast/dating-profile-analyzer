@@ -129,4 +129,44 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/health`);
     return response.json();
   },
+
+  // Image Analysis APIs
+  
+  // Trigger image analysis for an analysis
+  analyzeImages: async (analysisId: string) => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/image-analysis/${analysisId}`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to analyze images');
+    }
+
+    return response.json();
+  },
+
+  // Get image analysis results for all photos in an analysis
+  getImageAnalysisResults: async (analysisId: string) => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/image-analysis/analysis/${analysisId}`);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch image analysis results');
+    }
+
+    return response.json();
+  },
+
+  // Get image analysis for a specific photo
+  getPhotoAnalysis: async (photoId: string) => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/image-analysis/photo/${photoId}`);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch photo analysis');
+    }
+
+    return response.json();
+  },
 };

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { db } from '../config/firebase';
 import multer from 'multer';
 import { storage } from '../config/firebase';
+import { validateImageFormat } from '../utils/imageAnalysis';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -14,6 +15,28 @@ router.post('/', upload.array('photos', 10), async (req: Request, res: Response)
 
     if (!userId || !bio || !files || files.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Validate all images before processing
+    const validationResults = await Promise.all(
+      files.map(async (file, index) => ({
+        index,
+        filename: file.originalname,
+        validation: await validateImageFormat(file.buffer),
+      }))
+    );
+
+    // Check for invalid images
+    const invalidImages = validationResults.filter(r => !r.validation.valid);
+    if (invalidImages.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid image format detected',
+        invalidImages: invalidImages.map(img => ({
+          filename: img.filename,
+          index: img.index,
+          reason: img.validation.error,
+        })),
+      });
     }
 
     // Parse textResponses if it's a string
