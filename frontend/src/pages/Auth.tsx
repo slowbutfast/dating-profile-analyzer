@@ -130,7 +130,7 @@ const Auth = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
             <Heart className="w-8 h-8 text-primary fill-primary" />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-primary to-primary/90 bg-clip-text text-transparent pb-1">
             Dating Profile Analyzer
           </h1>
           <p className="text-muted-foreground mt-2">
