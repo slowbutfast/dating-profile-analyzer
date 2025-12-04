@@ -96,7 +96,7 @@ const Dashboard = () => {
               <Home className="w-4 h-4 mr-2" aria-hidden />
               Home
             </Button>
-            <Button variant="ghost" onClick={() => navigate('/about')} aria-label="Go to about page">
+            <Button variant="ghost" onClick={() => { navigate('/'); setTimeout(() => { const aboutSection = document.getElementById('about-section'); aboutSection?.scrollIntoView({ behavior: 'smooth' }); }, 100); }} aria-label="Go to about section">
               <Info className="w-4 h-4 mr-2" aria-hidden />
               About
             </Button>
