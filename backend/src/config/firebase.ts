@@ -50,12 +50,17 @@ const serviceAccount = {
 
 // Initialize Firebase Admin SDK
 try {
+  // Allow override of storage bucket URL, defaulting to firebasestorage.app format
+  const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || 
+    `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`;
+  
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
-    storageBucket: `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`,
+    storageBucket: storageBucket,
   });
   
   console.log('✅ Firebase Admin SDK initialized successfully');
+  console.log(`📦 Storage bucket: ${storageBucket}`);
 } catch (error: any) {
   console.error('❌ Failed to initialize Firebase Admin SDK:');
   console.error(error.message);
