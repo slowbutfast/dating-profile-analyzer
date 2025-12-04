@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Heart, Upload, History, LogOut, Plus } from 'lucide-react';
+import { Heart, Upload, History, LogOut, Plus, Home, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Analysis {
@@ -91,10 +91,20 @@ const Dashboard = () => {
             </div>
             <span className="text-xl font-bold" aria-label="App name">Profile Analyzer</span>
           </div>
-          <Button variant="ghost" onClick={signOut} aria-label="Sign out">
-            <LogOut className="w-4 h-4 mr-2" aria-hidden />
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => navigate('/')} aria-label="Go to home page">
+              <Home className="w-4 h-4 mr-2" aria-hidden />
+              Home
+            </Button>
+            <Button variant="ghost" onClick={() => { navigate('/'); setTimeout(() => { const aboutSection = document.getElementById('about-section'); aboutSection?.scrollIntoView({ behavior: 'smooth' }); }, 100); }} aria-label="Go to about section">
+              <Info className="w-4 h-4 mr-2" aria-hidden />
+              About
+            </Button>
+            <Button variant="ghost" onClick={signOut} aria-label="Sign out">
+              <LogOut className="w-4 h-4 mr-2" aria-hidden />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 
