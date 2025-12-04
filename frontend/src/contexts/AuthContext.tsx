@@ -12,6 +12,7 @@ import {
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/integrations/firebase/config';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -28,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -76,6 +78,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      toast({
+        title: 'Success',
+        description: 'Signed in successfully',
+      });
       return { error: null };
     } catch (error: any) {
       return { error };
@@ -86,6 +92,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
+      toast({
+        title: 'Success',
+        description: 'Signed in successfully with Google',
+      });
       return { error: null };
     } catch (error: any) {
       return { error };
@@ -95,9 +105,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
-      navigate('/');
+      setUser(null);
+      toast({
+        title: 'Success',
+        description: 'Signed out successfully',
+      });
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Error signing out:', error);
+      toast({
+        title: 'Error',
+        description: 'There was a problem signing out, but you have been logged out',
+        variant: 'destructive',
+      });
+      // Even if there's an error, try to navigate to home
+      setUser(null);
+      navigate('/', { replace: true });
     }
   };
 
