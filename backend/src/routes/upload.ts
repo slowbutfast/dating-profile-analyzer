@@ -1,11 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../config/firebase';
 import multer from 'multer';
-import { storage } from '../config/firebase';
 import { validateImageFormat } from '../utils/imageAnalysis';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, '../../uploads/profile-photos');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 // Upload profile for analysis
 router.post('/', upload.array('photos', 10), async (req: Request, res: Response) => {
@@ -55,33 +62,35 @@ router.post('/', upload.array('photos', 10), async (req: Request, res: Response)
 
     const analysisId = analysisRef.id;
 
-    // Upload photos to Firebase Storage and create photo documents
+    // Save photos locally and create photo documents
     const photoPromises = files.map(async (file, index) => {
       const filename = `${Date.now()}_${index}_${file.originalname}`;
-      const bucket = storage.bucket();
-      const fileRef = bucket.file(`profile-photos/${userId}/${filename}`);
+      const userDir = path.join(uploadsDir, userId);
+      
+      // Create user directory if it doesn't exist
+      if (!fs.existsSync(userDir)) {
+        fs.mkdirSync(userDir, { recursive: true });
+      }
 
-      // Upload file
-      await fileRef.save(file.buffer, {
-        metadata: {
-          contentType: file.mimetype,
-        },
-      });
+      const filePath = path.join(userDir, filename);
+      
+      // Save file to local filesystem
+      fs.writeFileSync(filePath, file.buffer);
 
-      // Make file publicly accessible
-      await fileRef.makePublic();
+      // Create a local URL that the backend can serve
+      // This will be accessible at http://localhost:3001/uploads/profile-photos/userId/filename
+      const localUrl = `/uploads/profile-photos/${userId}/${filename}`;
 
-      // Get public URL
-      const publicUrl = `https://storage.googleapis.com/${bucket.name}/${fileRef.name}`;
-
-      // Create photo document in Firestore
-      await db.collection('photos').add({
+      // Create photo document in Firestore with local path (no base64 to avoid size limits)
+      const photoDoc = await db.collection('photos').add({
         analysis_id: analysisId,
-        photo_url: publicUrl,
-        storage_path: fileRef.name,
+        photo_url: localUrl,
+        storage_path: filePath,
         order_index: index,
         created_at: new Date(),
       });
+
+      return photoDoc.id;
     });
 
     // Create text_response documents
