@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, Upload, History, LogOut, Plus, Home, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { FloatingHeartsBackground } from '@/components/ui/floating-hearts-background';
 
 interface Analysis {
   id: string;
@@ -74,13 +75,9 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden" aria-label="Dashboard page">
-      {/* Background Elements */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute inset-0" style={{ background: 'var(--gradient-mesh)' }} />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen relative overflow-hidden" aria-label="Dashboard page">
+      {/* Background with floating hearts */}
+      <FloatingHeartsBackground />
 
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10" role="banner" aria-label="Header">
