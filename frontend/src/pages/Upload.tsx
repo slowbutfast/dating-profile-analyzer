@@ -19,12 +19,12 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
 const uploadSchema = z.object({
-  photos: z.array(z.any()).min(3, 'Upload at least 3 photos').max(10, 'Maximum 10 photos'),
-  bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
+  photos: z.array(z.any()).min(3, 'Upload at least 3 photos').max(6, 'Maximum 6 photos'),
+  bio: z.string().max(500, 'Bio must be less than 500 characters').optional().or(z.literal('')),
   textResponses: z.array(z.object({
     question: z.string().trim().min(1, 'Question cannot be empty').max(200),
     answer: z.string().trim().min(1, 'Answer cannot be empty').max(1000),
-  })).optional(),
+  })).optional().or(z.array(z.any()).length(0)),
 });
 
 const Upload = () => {
@@ -81,10 +81,10 @@ const Upload = () => {
       return true;
     });
 
-    if (photos.length + validFiles.length > 10) {
+    if (photos.length + validFiles.length > 6) {
       toast({
         title: 'Too many photos',
-        description: 'Maximum 10 photos allowed',
+        description: 'Maximum 6 photos allowed',
         variant: 'destructive',
       });
       return;
@@ -153,7 +153,7 @@ const Upload = () => {
     setHasPersonalityProfile(true);
     
     if (pendingUpload) {
-      const filteredResponses = textResponses.filter(tr => tr.question.trim() || tr.answer.trim());
+      const filteredResponses = textResponses.filter(tr => tr.question.trim() && tr.answer.trim());
       await performUpload(filteredResponses);
     }
   };
@@ -162,7 +162,7 @@ const Upload = () => {
     setShowOnboarding(false);
     
     if (pendingUpload) {
-      const filteredResponses = textResponses.filter(tr => tr.question.trim() || tr.answer.trim());
+      const filteredResponses = textResponses.filter(tr => tr.question.trim() && tr.answer.trim());
       await performUpload(filteredResponses);
     }
   };
@@ -174,11 +174,11 @@ const Upload = () => {
     setUploading(true);
 
     try {
-      // Validate input
-      const filteredResponses = textResponses.filter(tr => tr.question.trim() || tr.answer.trim());
+      // Validate input - only include responses where BOTH question AND answer are filled
+      const filteredResponses = textResponses.filter(tr => tr.question.trim() && tr.answer.trim());
       uploadSchema.parse({
         photos,
-        bio,
+        bio: bio.trim() || undefined,
         textResponses: filteredResponses.length > 0 ? filteredResponses : undefined,
       });
 
@@ -249,11 +249,11 @@ const Upload = () => {
               <div>
                 <CardTitle className="text-2xl mb-1" aria-label="Profile photos title">Profile Photos</CardTitle>
                 <CardDescription aria-label="Profile photos description">
-                  Upload 3-10 photos from your profile for comprehensive analysis
+                  Upload 3-6 photos from your profile for comprehensive analysis
                 </CardDescription>
               </div>
               <div className="text-lg font-semibold text-primary">
-                {photos.length}/10
+                {photos.length}/6
               </div>
             </div>
           </CardHeader>
@@ -280,7 +280,7 @@ const Upload = () => {
                 </div>
               ))}
               
-              {photos.length < 10 && (
+              {photos.length < 6 && (
                 <label className="aspect-square rounded-xl border-2 border-dashed border-primary/30 flex items-center justify-center cursor-pointer hover:bg-primary/5 hover:border-primary/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group" aria-label="Add photo">
                   <div className="text-center">
                     <div className="text-5xl text-primary mb-2 group-hover:scale-110 transition-transform">+</div>
@@ -373,10 +373,10 @@ const Upload = () => {
         </Card>
 
         {/* Submit Button */}
-        <div className="flex justify-center pt-4" aria-label="Submit area">
+        <div className="flex flex-col items-center gap-2 pt-4" aria-label="Submit area">
           <Button 
             type="submit" 
-            disabled={uploading} 
+            disabled={uploading || photos.length < 3} 
             size="lg" 
             className="text-lg px-12 py-6 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
             aria-label="Analyze my profile"
@@ -392,6 +392,11 @@ const Upload = () => {
               </>
             )}
           </Button>
+          {photos.length < 3 && !uploading && (
+            <p className="text-sm text-muted-foreground">
+              Upload at least {3 - photos.length} more {photos.length === 2 ? 'photo' : 'photos'} to submit
+            </p>
+          )}
         </div>
       </form>
 
