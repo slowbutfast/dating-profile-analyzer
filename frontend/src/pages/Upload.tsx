@@ -11,8 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Upload as UploadIcon, X, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Upload as UploadIcon, X, Image as ImageIcon, Camera, MessageSquare, Sparkles } from 'lucide-react';
 import { z } from 'zod';
+import { FloatingHeartsBackgroundUpload } from '@/components/ui/floating-hearts-background';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -218,50 +219,72 @@ const Upload = () => {
   };
 
   return (
-    <div className="container max-w-4xl mx-auto py-10" aria-label="Upload profile page">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2" aria-label="Upload title">Upload Your Profile</h1>
-        <p className="text-muted-foreground" aria-label="Upload description">
-          Upload your dating profile photos, bio, and optional text responses to get an AI-powered analysis.
-        </p>
-      </div>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background with floating hearts */}
+      <FloatingHeartsBackgroundUpload />
+
+      <div className="container max-w-4xl mx-auto py-10 relative" aria-label="Upload profile page">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/dashboard')}
+          className="mb-6"
+          aria-label="Back to dashboard"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Dashboard
+        </Button>
+        
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-3" aria-label="Upload title">Upload Your Profile</h1>
+          <p className="text-lg text-muted-foreground" aria-label="Upload description">
+            Submit your profile content for analysis. We'll evaluate what's working well and provide recommendations for improvement.
+          </p>
+        </div>
 
       <form onSubmit={handleSubmit} className="space-y-8" aria-label="Upload form">
         {/* Photo Upload Section */}
-        <Card aria-label="Profile photos card">
+        <Card className="border-2 hover:border-primary/20 transition-all shadow-sm hover:shadow-lg" aria-label="Profile photos card">
           <CardHeader>
-            <CardTitle aria-label="Profile photos title">Profile Photos</CardTitle>
-            <CardDescription aria-label="Profile photos description">
-              Upload 3-10 photos from your dating profile. Accepted formats: JPG, PNG, WebP (max 10MB each)
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl mb-1" aria-label="Profile photos title">Profile Photos</CardTitle>
+                <CardDescription aria-label="Profile photos description">
+                  Upload 3-10 photos from your profile for comprehensive analysis
+                </CardDescription>
+              </div>
+              <div className="text-lg font-semibold text-primary">
+                {photos.length}/10
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4" aria-label="Uploaded photos grid">
               {photos.map((photo, index) => (
-                <div key={index} className="relative aspect-square rounded-lg overflow-hidden border" aria-label={`Uploaded photo ${index + 1}`}>
+                <div key={index} className="relative aspect-square rounded-xl overflow-hidden border-2 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group" aria-label={`Uploaded photo ${index + 1}`}>
                   <img
                     src={URL.createObjectURL(photo)}
                     alt={`Upload ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                   <Button
                     type="button"
                     variant="destructive"
                     size="icon"
-                    className="absolute top-2 right-2"
+                    className="absolute top-2 right-2 h-8 w-8 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => removePhoto(index)}
                     aria-label={`Remove photo ${index + 1}`}
                   >
-                    ×
+                    <X className="w-4 h-4" />
                   </Button>
                 </div>
               ))}
               
               {photos.length < 10 && (
-                <label className="aspect-square rounded-lg border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors" aria-label="Add photo">
+                <label className="aspect-square rounded-xl border-2 border-dashed border-primary/30 flex items-center justify-center cursor-pointer hover:bg-primary/5 hover:border-primary/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group" aria-label="Add photo">
                   <div className="text-center">
-                    <span className="text-4xl">+</span>
-                    <p className="text-sm text-muted-foreground mt-2">Add Photo</p>
+                    <div className="text-5xl text-primary mb-2 group-hover:scale-110 transition-transform">+</div>
+                    <p className="text-sm font-medium text-muted-foreground">Add Photo</p>
                   </div>
                   <input
                     type="file"
@@ -278,16 +301,16 @@ const Upload = () => {
         </Card>
 
         {/* Bio Section */}
-        <Card aria-label="Bio card">
+        <Card className="border-2 hover:border-primary/20 transition-all shadow-sm hover:shadow-lg" aria-label="Bio card">
           <CardHeader>
-            <CardTitle aria-label="Bio title">Bio</CardTitle>
+            <CardTitle className="text-2xl mb-1" aria-label="Bio title">Profile Bio (Optional)</CardTitle>
             <CardDescription aria-label="Bio description">
-              Paste your dating profile bio or description
+              Include your bio or about section to help us evaluate your written presentation
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Textarea
-              placeholder="Enter your bio here..."
+              placeholder="Enter your profile bio..."
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               className="min-h-[200px]"
@@ -297,11 +320,11 @@ const Upload = () => {
         </Card>
 
         {/* Text Responses Section */}
-        <Card aria-label="Text responses card">
+        <Card className="border-2 hover:border-primary/20 transition-all shadow-sm hover:shadow-lg" aria-label="Text responses card">
           <CardHeader>
-            <CardTitle aria-label="Text responses title">Text Responses (Optional)</CardTitle>
+            <CardTitle className="text-2xl mb-1" aria-label="Text responses title">Prompt Responses (Optional)</CardTitle>
             <CardDescription aria-label="Text responses description">
-              Add prompt questions and your responses from your profile (e.g., "What I'm looking for", "My perfect Sunday")
+              Add your responses to profile prompts for a more comprehensive text analysis
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -350,9 +373,24 @@ const Upload = () => {
         </Card>
 
         {/* Submit Button */}
-        <div className="flex justify-end" aria-label="Submit area">
-          <Button type="submit" disabled={uploading} size="lg" aria-label="Analyze my profile">
-            {uploading ? 'Uploading...' : 'Analyze My Profile'}
+        <div className="flex justify-center pt-4" aria-label="Submit area">
+          <Button 
+            type="submit" 
+            disabled={uploading} 
+            size="lg" 
+            className="text-lg px-12 py-6 shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            aria-label="Analyze my profile"
+          >
+            {uploading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3" />
+                Analyzing Profile...
+              </>
+            ) : (
+              <>
+                Submit
+              </>
+            )}
           </Button>
         </div>
       </form>
@@ -363,6 +401,7 @@ const Upload = () => {
         onComplete={handleOnboardingComplete}
         onSkip={handleOnboardingSkip}
       />
+      </div>
     </div>
   );
 };
