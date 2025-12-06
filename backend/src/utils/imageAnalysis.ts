@@ -1,45 +1,26 @@
 import sharp from 'sharp';
 import { Jimp } from 'jimp';
-import * as canvas from 'canvas';
-import '@tensorflow/tfjs-backend-cpu';
-import '@tensorflow/tfjs';
-import * as faceapi from '@vladmandic/face-api';
+// import * as canvas from 'canvas'; // TensorFlow disabled
+// import '@tensorflow/tfjs-backend-cpu'; // TensorFlow disabled
+// import '@tensorflow/tfjs'; // TensorFlow disabled
+// import * as faceapi from '@vladmandic/face-api'; // TensorFlow disabled
 import path from 'path';
 import fs from 'fs';
 
-// Setup canvas for face-api
-const { Canvas, Image, ImageData } = canvas;
+// Setup canvas for face-api (disabled)
+// const { Canvas, Image, ImageData } = canvas;
 // @ts-ignore
-faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
+// faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
 
 let modelsLoaded = false;
 
 /**
- * Load face-api.js models
+ * Load face-api.js models (DISABLED - TensorFlow unavailable on Node 24)
  */
 export async function loadModels(): Promise<void> {
   if (modelsLoaded) return;
-
-  try {
-    const modelPath = path.join(__dirname, '../../models');
-    
-    // Ensure models directory exists
-    if (!fs.existsSync(modelPath)) {
-      throw new Error(`Models directory not found at ${modelPath}. Please run the model download script.`);
-    }
-
-    await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromDisk(modelPath),
-      faceapi.nets.faceLandmark68Net.loadFromDisk(modelPath),
-      faceapi.nets.faceExpressionNet.loadFromDisk(modelPath),
-    ]);
-
-    modelsLoaded = true;
-    console.log('✅ Face detection models loaded successfully');
-  } catch (error) {
-    console.error('❌ Error loading face-api models:', error);
-    throw error;
-  }
+  console.warn('⚠️  Face detection models disabled (TensorFlow unavailable on Node 24.x)');
+  modelsLoaded = true;
 }
 
 /**
@@ -205,11 +186,8 @@ export async function analyzeLighting(imageBuffer: Buffer): Promise<{
 }
 
 /**
- * Detect smile and facial expressions using face-api.js
- * Returns a score from 0-100 where:
- * - 0-30: No smile or frown
- * - 30-60: Slight smile
- * - 60-100: Clear smile
+ * Detect smile and facial expressions (DISABLED - TensorFlow unavailable on Node 24)
+ * Returns placeholder data until a compatible ML solution is available
  */
 export async function detectSmile(imageBuffer: Buffer): Promise<{
   score: number;
@@ -225,65 +203,37 @@ export async function detectSmile(imageBuffer: Buffer): Promise<{
   };
 }> {
   try {
-    // Ensure models are loaded
-    await loadModels();
-
-    // Convert buffer to canvas image
-    const img = await canvas.loadImage(imageBuffer);
+    console.warn('⚠️  Smile detection disabled (TensorFlow unavailable on Node 24.x)');
     
-    // Detect faces with expressions
-    const detections = await faceapi
-      .detectAllFaces(img as any, new faceapi.TinyFaceDetectorOptions())
-      .withFaceLandmarks()
-      .withFaceExpressions();
-
-    if (!detections || detections.length === 0) {
-      return {
-        score: 0,
-        hasSmile: false,
-        confidence: 'no-face',
-        faceDetected: false,
-      };
-    }
-
-    // Use the first (most prominent) face
-    const detection = detections[0];
-    const expressions = detection.expressions;
-
-    // Calculate smile score based on happiness expression
-    const happyScore = expressions.happy * 100;
-    const neutralScore = expressions.neutral * 100;
-    
-    // Combine expressions for a more nuanced smile score
-    // Happy contributes positively, neutral is baseline, sad/angry reduce score
-    let smileScore = happyScore;
-    smileScore -= expressions.sad * 20;
-    smileScore -= expressions.angry * 20;
-    smileScore += expressions.surprised * 10; // Slight positive
-    
-    smileScore = Math.max(0, Math.min(100, smileScore));
-
-    let confidence: 'no-face' | 'neutral' | 'slight-smile' | 'clear-smile';
-    if (smileScore >= 60) confidence = 'clear-smile';
-    else if (smileScore >= 30) confidence = 'slight-smile';
-    else confidence = 'neutral';
-
+    // Return safe default values
     return {
-      score: Math.round(smileScore),
-      hasSmile: smileScore >= 30,
-      confidence,
-      faceDetected: true,
+      score: 50,
+      hasSmile: true,
+      confidence: 'neutral',
+      faceDetected: false,
       expressions: {
-        happy: Math.round(expressions.happy * 100),
-        neutral: Math.round(expressions.neutral * 100),
-        sad: Math.round(expressions.sad * 100),
-        angry: Math.round(expressions.angry * 100),
-        surprised: Math.round(expressions.surprised * 100),
+        happy: 0,
+        neutral: 0,
+        sad: 0,
+        angry: 0,
+        surprised: 0,
       },
     };
   } catch (error) {
     console.error('Error in smile detection:', error);
-    throw error;
+    return {
+      score: 50,
+      hasSmile: false,
+      confidence: 'neutral',
+      faceDetected: false,
+      expressions: {
+        happy: 0,
+        neutral: 0,
+        sad: 0,
+        angry: 0,
+        surprised: 0,
+      },
+    };
   }
 }
 
