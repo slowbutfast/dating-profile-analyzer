@@ -79,16 +79,36 @@ const Results = () => {
 
   useEffect(() => {
     loadAnalysisData();
-    
-    // Poll for updates if status is pending or processing
-    const interval = setInterval(() => {
-      if (analysis?.status === 'pending' || analysis?.status === 'processing') {
-        loadAnalysisData();
-      }
-    }, 5000);
+  }, [id]);
 
-    return () => clearInterval(interval);
-  }, [id, analysis?.status]);
+  // Separate effect for polling with timeout
+  useEffect(() => {
+    if (!analysis) return;
+    
+    // Only poll if status is pending or processing
+    if (analysis.status === 'pending' || analysis.status === 'processing') {
+      const pollCount = { current: 0 };
+      const maxPolls = 60; // Stop after 5 minutes (60 * 5 seconds)
+      
+      const interval = setInterval(() => {
+        pollCount.current++;
+        
+        if (pollCount.current >= maxPolls) {
+          clearInterval(interval);
+          toast({
+            title: 'Analysis Taking Longer Than Expected',
+            description: 'Please refresh the page to check status',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        loadAnalysisData();
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [analysis?.status]);
 
   const loadAnalysisData = async () => {
     if (!id) return;
