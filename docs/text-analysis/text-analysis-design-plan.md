@@ -36,11 +36,15 @@ Collected during onboarding, stored in Firestore `user_personalities`:
 ```typescript
 interface PersonalityProfile {
   userId: string;
-  personality_type: string;      // "Outgoing" | "Reserved" | "Adventurous" | "Calm" | "Creative"
-  conversation_style: string;    // "Deep" | "Light" | "Intellectual" | "Funny" | "Balanced"
-  dating_goal: string;           // "Long-term" | "Short-term" | "Friends" | "Not sure"
-  humor_style: string;           // "Witty" | "Sarcastic" | "Silly" | "Dry" | "Not humorous"
-  // Other fields from onboarding (age, gender, interests, etc.)
+  age_range: string;             // "18-24" | "25-29" | "30-34" | "35-39" | "40-44" | "45+"
+  gender: string;                // "Male" | "Female" | "Non-binary" | "Prefer not to say"
+  dating_goal: string;           // "Long-term relationship" | "Short-term dating" | "New friends" | "Not sure yet"
+  personality_type: string;      // "Outgoing and social" | "Reserved and thoughtful" | "Adventurous and spontaneous" | "Calm and steady" | "Creative and expressive"
+  conversation_style: string;    // "Deep and meaningful" | "Light and playful" | "Intellectual and curious" | "Funny and entertaining" | "Balanced mix"
+  humor_style: string;           // "Witty and clever" | "Sarcastic" | "Silly and goofy" | "Dry humor" | "Not very humorous"
+  dating_experience: string;     // "Very experienced" | "Somewhat experienced" | "New to dating apps" | "First time"
+  interests: string;             // Comma-separated interests
+  ideal_match: string;           // Description of ideal match
 }
 ```
 
@@ -55,21 +59,110 @@ interface TextResponse {
 
 ### 1.3 Text Feedback (Output)
 
-**NOTE:** Text feedback structure and LLM rubrics are deferred for later implementation. Full spec coming soon.
+```typescript
+interface TextFeedback {
+  // LLM-generated analysis (influenced by personality)
+  analysis: string;              // Main feedback/analysis from LLM
+  strengths: string[];           // 2-3 things they did well
+  suggestions: string[];         // 2-3 actionable suggestions
+  
+  // Simple objective metrics
+  word_count: number;
+  has_specific_examples: boolean;
+  
+  // Metadata
+  analysis_id: string;
+  created_at: Date;
+  personality_context: string;   // Which personality traits influenced this analysis
+}
+```
 
 ---
 
-## 2. Objective Metrics (Rule-Based, No LLM)
+## 2. Objective Metrics (Simple & Fast)
 
-**NOTE:** Objective metrics implementation is deferred pending finalization of feedback rubrics. Details coming soon.
+```typescript
+interface TextStatistics {
+  word_count: number;
+  sentence_count: number;
+  has_specific_examples: boolean;
+}
+
+function analyzeTextStatistics(text: string): TextStatistics {
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  
+  // Check for specific examples (concrete details, stories, specifics)
+  const hasExamples = /\b(like|such as|for example|specifically|when|last|recently|i've|i'm|because|since)\b/i.test(text);
+  
+  return {
+    word_count: words.length,
+    sentence_count: sentences.length,
+    has_specific_examples: hasExamples,
+  };
+}
+```
 
 ---
 
-## 3. LLM Evaluation (Rubrics - Deferred)
+## 3. LLM Analysis (Personality-Influenced)
 
-**NOTE:** LLM evaluation rubrics are under review and deferred for later implementation. We're reconsidering the rubric approach to ensure it provides useful, fair feedback.
+The LLM receives the text response + personality profile and generates personalized feedback.
 
-Placeholder for final rubric definitions coming soon.
+### 3.1 LLM Prompt
+
+```typescript
+const buildAnalysisPrompt = (
+  textResponse: string,
+  personality: PersonalityProfile,
+  question: string
+): string => `
+You are a dating profile coach providing personalized feedback on a profile response.
+
+QUESTION: "${question}"
+
+USER'S RESPONSE:
+"${textResponse}"
+
+USER'S PERSONALITY PROFILE:
+- Dating Goal: ${personality.dating_goal}
+- Personality Type: ${personality.personality_type}
+- Conversation Style: ${personality.conversation_style}
+- Humor Style: ${personality.humor_style}
+- Interests: ${personality.interests}
+- Ideal Match: ${personality.ideal_match}
+
+Your task: Provide constructive, encouraging feedback that:
+1. Acknowledges their personality style
+2. Highlights what works well about their response
+3. Suggests 2-3 concrete improvements tailored to their dating goal and personality
+4. Explains why the suggestions matter for their dating goal
+
+Format your response as JSON:
+{
+  "analysis": "<1-2 sentence main feedback acknowledging their personality>",
+  "strengths": [
+    "<strength 1>",
+    "<strength 2>",
+    "<strength 3>"
+  ],
+  "suggestions": [
+    "<suggestion 1 with specific example>",
+    "<suggestion 2 with specific example>",
+    "<suggestion 3 with specific example>"
+  ],
+  "personality_context": "<briefly explain which personality traits influenced this feedback>"
+}
+`;
+```
+
+### 3.2 Key Differences From Previous Approach
+
+- **No rigid rubrics:** LLM evaluates holistically, not against fixed scoring criteria
+- **Personality-aware:** Feedback adapts to their dating goal and communication style
+- **Encouraging tone:** Focuses on what works and how to improve, not judgment
+- **Actionable suggestions:** Each suggestion includes a concrete example
+- **Flexible:** Different people get different kinds of feedback based on their personality
 
 ---
 
@@ -138,21 +231,56 @@ export type TextResponse = z.infer<typeof TextResponseSchema>;
 
 ---
 
-## 5. Light Personality Integration
+---
 
-**NOTE:** Personality integration features are deferred pending finalization of text feedback system. Details coming soon.
+## 5. Complete Analysis Flow
+
+```
+1. USER SUBMITS TEXT RESPONSE
+   └─ Client validates (length, forbidden patterns)
+
+2. BACKEND RECEIVES
+   ├─ Sanitize input
+   ├─ Zod schema validation
+   └─ Check for dangerous patterns
+
+3. CALCULATE OBJECTIVE METRICS
+   ├─ Word count, sentence count
+   └─ Detect if response has specific examples
+
+4. FETCH PERSONALITY PROFILE
+   └─ Query Firestore user_personalities collection
+
+5. LLM ANALYSIS (PERSONALITY-INFLUENCED)
+   ├─ Build prompt with text response + personality profile
+   ├─ Call Claude/GPT (temperature=0.7, max_tokens=500, timeout=30s)
+   ├─ Validate JSON response
+   └─ Parse analysis, strengths, suggestions
+
+6. SAVE TO FIRESTORE
+   └─ Save TextFeedback with analysis + metrics
+
+7. DISPLAY IN DASHBOARD
+   └─ Show main analysis insight on dashboard card
+```
 
 ---
 
-## 6. Complete Analysis Flow
+## 6. What Gets Displayed Where
 
-**NOTE:** Analysis flow and display components are deferred pending finalization of rubrics. Coming soon.
+### 6.1 Dashboard (Quick Insight)
 
----
+Show on analysis card:
+- Main analysis statement (the "analysis" field from LLM)
+- Quick stats (word count, has specific examples)
+- Link to view full feedback
 
-## 7. Implementation Tasks (Prioritized)
+### 6.2 Results Page (Full Feedback)
 
-**NOTE:** All implementation is deferred pending finalization of text feedback rubrics and system design. Task list and phases coming soon.
-
-**Current Status:** In design review phase. Next steps TBD.
+Show complete feedback:
+- Full analysis statement
+- Strengths (bulleted list)
+- Suggestions (bulleted list with examples)
+- Objective metrics (word count, examples)
+- Which personality traits influenced the feedback
 
