@@ -205,11 +205,8 @@ export async function analyzeLighting(imageBuffer: Buffer): Promise<{
 }
 
 /**
- * Detect smile and facial expressions using face-api.js
- * Returns a score from 0-100 where:
- * - 0-30: No smile or frown
- * - 30-60: Slight smile
- * - 60-100: Clear smile
+ * Detect smile and facial expressions
+ * Falls back to safe defaults if face detection fails
  */
 export async function detectSmile(imageBuffer: Buffer): Promise<{
   score: number;
@@ -238,6 +235,7 @@ export async function detectSmile(imageBuffer: Buffer): Promise<{
       .withFaceExpressions();
 
     if (!detections || detections.length === 0) {
+      console.log('No face detected in image');
       return {
         score: 0,
         hasSmile: false,
@@ -252,7 +250,6 @@ export async function detectSmile(imageBuffer: Buffer): Promise<{
 
     // Calculate smile score based on happiness expression
     const happyScore = expressions.happy * 100;
-    const neutralScore = expressions.neutral * 100;
     
     // Combine expressions for a more nuanced smile score
     // Happy contributes positively, neutral is baseline, sad/angry reduce score
@@ -268,6 +265,8 @@ export async function detectSmile(imageBuffer: Buffer): Promise<{
     else if (smileScore >= 30) confidence = 'slight-smile';
     else confidence = 'neutral';
 
+    console.log(`Smile detection completed: score=${smileScore}, confidence=${confidence}`);
+    
     return {
       score: Math.round(smileScore),
       hasSmile: smileScore >= 30,
@@ -282,8 +281,21 @@ export async function detectSmile(imageBuffer: Buffer): Promise<{
       },
     };
   } catch (error) {
-    console.error('Error in smile detection:', error);
-    throw error;
+    console.error('⚠️  Error in smile detection, using fallback:', error);
+    // Return safe default instead of throwing - don't let smile detection block the entire analysis
+    return {
+      score: 50,
+      hasSmile: false,
+      confidence: 'neutral',
+      faceDetected: false,
+      expressions: {
+        happy: 0,
+        neutral: 100,
+        sad: 0,
+        angry: 0,
+        surprised: 0,
+      },
+    };
   }
 }
 
@@ -298,12 +310,37 @@ export async function analyzeImage(imageBuffer: Buffer): Promise<{
   warnings: string[];
 }> {
   try {
-    // Run all analyses in parallel for better performance
-    const [blur, lighting, smile] = await Promise.all([
+    console.log('Starting image analysis...');
+    
+    // Run blur and lighting first (these are fast and reliable)
+    const [blur, lighting] = await Promise.all([
       detectBlur(imageBuffer),
       analyzeLighting(imageBuffer),
-      detectSmile(imageBuffer),
     ]);
+    
+    console.log(`Blur score: ${blur.score}, Lighting score: ${lighting.score}`);
+    
+    // Run smile detection separately with its own error handling
+    let smile: Awaited<ReturnType<typeof detectSmile>>;
+    try {
+      smile = await detectSmile(imageBuffer);
+      console.log(`Smile score: ${smile.score}`);
+    } catch (smileError) {
+      console.error('Smile detection failed, using fallback:', smileError);
+      smile = {
+        score: 50,
+        hasSmile: false,
+        confidence: 'neutral',
+        faceDetected: false,
+        expressions: {
+          happy: 0,
+          neutral: 100,
+          sad: 0,
+          angry: 0,
+          surprised: 0,
+        },
+      };
+    }
 
     // Calculate overall quality score (weighted average)
     const overallScore = Math.round(
@@ -311,6 +348,8 @@ export async function analyzeImage(imageBuffer: Buffer): Promise<{
       (lighting.score * 0.35) + // Lighting is very important (35%)
       (smile.score * 0.30) // Smile presence is important but not critical (30%)
     );
+
+    console.log(`Overall score: ${overallScore}`);
 
     // Compile warnings
     const warnings: string[] = [];
@@ -329,6 +368,8 @@ export async function analyzeImage(imageBuffer: Buffer): Promise<{
       warnings.push('Consider using a photo with a smile - profiles with smiling photos tend to perform better');
     }
 
+    console.log('Image analysis completed successfully');
+
     return {
       blur,
       lighting,
@@ -337,7 +378,7 @@ export async function analyzeImage(imageBuffer: Buffer): Promise<{
       warnings,
     };
   } catch (error) {
-    console.error('Error in comprehensive image analysis:', error);
+    console.error('❌ Error in comprehensive image analysis:', error);
     throw error;
   }
 }
