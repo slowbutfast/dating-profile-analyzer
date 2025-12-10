@@ -5,6 +5,7 @@ import path from 'path';
 import analysisRoutes from './routes/analysis';
 import uploadRoutes from './routes/upload';
 import imageAnalysisRoutes from './routes/imageAnalysis';
+import textAnalysisRoutes from './routes/textAnalysis';
 import { verifyAuth } from './middleware/auth';
 
 dotenv.config();
@@ -36,6 +37,7 @@ app.get('/api/health', (req: Request, res: Response) => {
 app.use('/api/analyses', verifyAuth, analysisRoutes);
 app.use('/api/upload', verifyAuth, uploadRoutes);
 app.use('/api/image-analysis', verifyAuth, imageAnalysisRoutes);
+app.use('/api/text-analysis', verifyAuth, textAnalysisRoutes);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {
