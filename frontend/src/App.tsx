@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Upload from "./pages/Upload";
 import Results from "./pages/Results";
+import TestTextAnalysis from "./pages/TestTextAnalysis";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Results />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/test/text-analysis"
+              element={
+                <ProtectedRoute>
+                  <TestTextAnalysis />
                 </ProtectedRoute>
               }
             />
