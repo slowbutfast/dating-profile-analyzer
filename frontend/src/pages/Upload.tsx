@@ -134,6 +134,21 @@ const Upload = () => {
         // Don't block navigation if image analysis fails
       }
 
+      // Automatically trigger text analysis for each response
+      try {
+        for (const response of filteredResponses) {
+          await api.analyzeTextResponse(
+            result.analysisId,
+            response.question,
+            response.answer
+          );
+        }
+        console.log('Text analysis triggered successfully for all responses');
+      } catch (textAnalysisError) {
+        console.error('Failed to trigger text analysis:', textAnalysisError);
+        // Don't block navigation if text analysis fails - it can happen asynchronously
+      }
+
       navigate(`/results/${result.analysisId}`);
     } catch (error: any) {
       console.error('Upload error:', error);
