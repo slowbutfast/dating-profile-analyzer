@@ -2,7 +2,7 @@ import sharp from 'sharp';
 import { Jimp } from 'jimp';
 import * as canvas from 'canvas';
 import '@tensorflow/tfjs-backend-cpu';
-import '@tensorflow/tfjs';
+import '@tensorflow/tfjs-node';
 import * as faceapi from '@vladmandic/face-api';
 import path from 'path';
 import fs from 'fs';
