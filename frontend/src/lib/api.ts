@@ -72,18 +72,31 @@ export const api = {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/upload`, {
-      method: 'POST',
-      body: formData,
-      headers,
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
+        method: 'POST',
+        body: formData,
+        headers,
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Upload failed');
+      if (!response.ok) {
+        let errorMessage = 'Upload failed';
+        try {
+          const error = await response.json();
+          errorMessage = error.error || errorMessage;
+        } catch {
+          errorMessage = `Server returned ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      return response.json();
+    } catch (error: any) {
+      if (error.message === 'Failed to fetch' || error.name === 'TypeError') {
+        throw new Error(`Cannot connect to backend server at ${API_BASE_URL}. Please ensure the backend server is running.`);
+      }
+      throw error;
     }
-
-    return response.json();
   },
 
   // Get all analyses for a user

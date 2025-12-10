@@ -118,7 +118,16 @@ const Upload = () => {
     
     setUploading(true);
     try {
+      console.log('Starting upload with:', {
+        userId: user.uid,
+        photoCount: photos.length,
+        bioLength: bio.trim().length,
+        responseCount: filteredResponses.length
+      });
+      
       const result = await api.upload(user.uid, photos, bio.trim(), filteredResponses);
+      
+      console.log('Upload result:', result);
 
       toast({
         title: 'Upload successful!',
@@ -136,10 +145,26 @@ const Upload = () => {
 
       navigate(`/results/${result.analysisId}`);
     } catch (error: any) {
-      console.error('Upload error:', error);
+      console.error('Upload error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        error: error
+      });
+      
+      let errorMessage = 'Please try again';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.toString().includes('Failed to fetch')) {
+        errorMessage = 'Network error: Unable to connect to the server. Please check your connection and try again.';
+      } else if (error.status) {
+        errorMessage = `Server error (${error.status}): ${error.statusText || 'Unknown error'}`;
+      }
+      
       toast({
         title: 'Upload failed',
-        description: error.message || 'Please try again',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
