@@ -42,11 +42,16 @@ async function downloadImage(url: string): Promise<Buffer> {
 router.post('/:analysisId', async (req: Request, res: Response) => {
   try {
     const { analysisId } = req.params;
+    
+    console.log(`🔍 Starting image analysis for analysis ID: ${analysisId}`);
 
     // Ensure models are loaded
+    console.log('📦 Loading face detection models...');
     await ensureModelsLoaded();
+    console.log('✅ Models loaded successfully');
 
     // Get all photos for this analysis
+    console.log('📸 Fetching photos from Firestore...');
     const photosSnapshot = await db
       .collection('photos')
       .where('analysis_id', '==', analysisId)
@@ -54,8 +59,11 @@ router.post('/:analysisId', async (req: Request, res: Response) => {
       .get();
 
     if (photosSnapshot.empty) {
+      console.log('❌ No photos found for this analysis');
       return res.status(404).json({ error: 'No photos found for this analysis' });
     }
+    
+    console.log(`✅ Found ${photosSnapshot.docs.length} photos to analyze`);
 
     const results = [];
 
@@ -126,12 +134,16 @@ router.post('/:analysisId', async (req: Request, res: Response) => {
       }
     }
 
-    // Update analysis status
+    // Update analysis status to completed
+    console.log(`✅ All photos analyzed. Updating analysis status to completed...`);
     await db.collection('analyses').doc(analysisId).update({
+      status: 'completed',
       images_analyzed: true,
       images_analyzed_at: new Date(),
       updated_at: new Date(),
     });
+    
+    console.log(`🎉 Analysis ${analysisId} completed successfully!`);
 
     res.json({
       success: true,
@@ -140,7 +152,8 @@ router.post('/:analysisId', async (req: Request, res: Response) => {
       results,
     });
   } catch (error: any) {
-    console.error('Image analysis error:', error);
+    console.error('❌ Image analysis error:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ error: error.message || 'Failed to analyze images' });
   }
 });
