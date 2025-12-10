@@ -30,6 +30,21 @@ interface PersonalityProfile {
 }
 
 /**
+ * Default test personality for when user hasn't completed onboarding
+ */
+const DEFAULT_TEST_PERSONALITY: PersonalityProfile = {
+  age_range: "25-30",
+  gender: "not specified",
+  dating_goal: "long-term relationship",
+  personality_type: "ENFP",
+  conversation_style: "thoughtful and engaging",
+  humor_style: "witty and clever",
+  dating_experience: "moderate",
+  interests: "travel, hiking, books, cooking, art",
+  ideal_match: "someone genuine, kind, and intellectually curious",
+};
+
+/**
  * POST /api/text-analysis/analyze
  * Analyzes a text response from a user
  * Requires: question, answer in request body
@@ -69,13 +84,16 @@ router.post("/analyze", async (req: AuthRequest, res: Response) => {
       .doc(userId)
       .get();
 
-    if (!personalitySnap.exists) {
-      return res.status(404).json({
-        error: "User personality profile not found. Please complete onboarding first.",
-      });
+    let personality: PersonalityProfile;
+    
+    if (personalitySnap.exists) {
+      // Use user's actual personality profile
+      personality = personalitySnap.data() as PersonalityProfile;
+    } else {
+      // Use default test personality for testing
+      console.log("No personality profile found, using default test personality");
+      personality = DEFAULT_TEST_PERSONALITY;
     }
-
-    const personality = personalitySnap.data() as PersonalityProfile;
 
     // Sanitize the answer
     const sanitizedAnswer = sanitizeInput(answer);
