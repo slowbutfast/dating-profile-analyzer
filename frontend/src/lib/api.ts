@@ -169,4 +169,49 @@ export const api = {
 
     return response.json();
   },
+
+  // Text Analysis APIs
+
+  // Analyze a text response with personality-aware LLM feedback
+  analyzeTextResponse: async (analysisId: string, question: string, answer: string) => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/text-analysis/analyze`, {
+      method: 'POST',
+      body: JSON.stringify({
+        analysis_id: analysisId,
+        question,
+        answer,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to analyze text response');
+    }
+
+    return response.json();
+  },
+
+  // Get text feedback for a specific response
+  getTextFeedback: async (feedbackId: string) => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/text-analysis/${feedbackId}`);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch text feedback');
+    }
+
+    return response.json();
+  },
+
+  // Get all text feedback for a user's analysis
+  getUserTextFeedback: async (analysisId: string) => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/text-analysis?analysis_id=${analysisId}`);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch text feedback');
+    }
+
+    return response.json();
+  },
 };

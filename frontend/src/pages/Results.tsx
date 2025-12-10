@@ -19,6 +19,7 @@ import {
 import { api } from '@/lib/api';
 import { PhotoAnalysisCard } from '@/components/PhotoAnalysisCard';
 import { AnalysisSummary } from '@/components/AnalysisSummary';
+import { TextFeedbackCard } from '@/components/TextFeedbackCard';
 import type { PhotoWithAnalysis } from '@/types/imageAnalysis';
 
 interface Analysis {
@@ -409,41 +410,18 @@ const Results = () => {
                 Text Analysis
               </CardTitle>
               <CardDescription>
-                Analysis of your {textResponses.length} prompt responses
+                Personality-aware analysis of your {textResponses.length} prompt responses
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
                 {textResponses.map((response, index) => (
-                  <div key={response.id} className="space-y-4" aria-label={`Response ${index + 1} analysis`}>
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">{response.question}</h4>
-                      <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg" aria-label={`Answer to question ${index + 1}`}>
-                        "{response.answer}"
-                      </p>
-                    </div>
-                    {response.analysis_result && analysis.status === 'completed' ? (
-                      <div className="space-y-3 pl-4 border-l-2 border-primary/20" aria-label={`Analysis metrics for response ${index + 1}`}>
-                        {renderMetricScore('Warmth', response.analysis_result.warmth || 0)}
-                        {renderMetricScore('Humor', response.analysis_result.humor || 0)}
-                        {renderMetricScore('Clarity', response.analysis_result.clarity || 0)}
-                        {renderMetricScore('Originality', response.analysis_result.originality || 0)}
-                        {renderMetricScore('Conversation Potential', response.analysis_result.conversation_potential || 0)}
-                        
-                        {response.analysis_result.strengths && (
-                          <div className="pt-2">
-                            <p className="text-sm font-medium text-green-600 mb-1">Strengths:</p>
-                            <p className="text-sm text-muted-foreground">{response.analysis_result.strengths}</p>
-                          </div>
-                        )}
-                        
-                        {response.analysis_result.improvements && (
-                          <div className="pt-2">
-                            <p className="text-sm font-medium text-orange-600 mb-1">Suggestions:</p>
-                            <p className="text-sm text-muted-foreground">{response.analysis_result.improvements}</p>
-                          </div>
-                        )}
-                      </div>
+                  <div key={response.id}>
+                    {response.analysis_result ? (
+                      <TextFeedbackCard
+                        feedback={response.analysis_result}
+                        index={index + 1}
+                      />
                     ) : analysis.status === 'completed' ? (
                       <p className="text-sm text-muted-foreground">No analysis data available</p>
                     ) : (
