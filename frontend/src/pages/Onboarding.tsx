@@ -177,6 +177,9 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+    } else {
+      // If on first question, go back to intro screen
+      setShowIntro(true);
     }
   };
 
@@ -319,6 +322,12 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
                 </ul>
               </div>
 
+              <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-2 border-blue-300/50 dark:border-blue-700/50 rounded-xl p-4 shadow-sm">
+                <p className="text-sm text-blue-900 dark:text-blue-100 leading-relaxed">
+                  <strong>Note:</strong> This personality assessment only personalizes your <strong>text feedback</strong> (bio and prompt responses). 
+                  Your photo analysis remains objective and is based on universal metrics like image quality, lighting, and composition.</p>
+              </div>
+
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                 <p className="text-sm text-foreground">
                   <strong>⏱️ Takes less than 2 minutes</strong> • 8 quick questions
@@ -410,8 +419,7 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
                 <Button
                   variant="outline"
                   onClick={handleBack}
-                  disabled={currentStep === 0}
-                  aria-label="Previous question"
+                  aria-label={currentStep === 0 ? "Back to introduction" : "Previous question"}
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Back
