@@ -156,7 +156,7 @@ const Index = () => {
               <div>
                 <h3 className="text-xl font-semibold mb-2" aria-label="Step 1 title">Upload Your Profile</h3>
                 <p className="text-muted-foreground" aria-label="Step 1 description">
-                  Add 3-10 photos and at least one text response from your dating profile
+                  Add 3-6 photos and at least one text response from your dating profile
                 </p>
               </div>
             </div>
@@ -218,7 +218,7 @@ const Index = () => {
                 </div>
                 <CardTitle aria-label="How it works title">How It Works</CardTitle>
                 <CardDescription aria-label="How it works description">
-                  Upload 3-10 photos and optionally add your bio and text responses. Our advanced
+                  Upload 3-6 photos and optionally add your bio and text responses. Our advanced
                   AI analyzes composition, lighting, expressions, and content to give you detailed
                   feedback and improvement suggestions.
                 </CardDescription>
