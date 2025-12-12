@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
 import { db } from '@/integrations/firebase/config';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import Onboarding from './Onboarding';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -258,21 +258,54 @@ const Upload = () => {
     }
   };
 
+  // DEV ONLY: Reset personality profile and trigger onboarding
+  const handleResetPersonality = async () => {
+    if (!user) return;
+    try {
+      const personalityRef = doc(db, 'user_personalities', user.uid);
+      await deleteDoc(personalityRef);
+      setHasPersonalityProfile(false);
+      setShowOnboarding(true); // Open onboarding immediately
+      toast({
+        title: 'Reset successful',
+        description: 'Onboarding popup opened for testing.',
+      });
+    } catch (error: any) {
+      console.error('Error resetting personality:', error);
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Background with floating hearts */}
       <FloatingHeartsBackgroundUpload />
 
       <div className="container max-w-4xl mx-auto py-10 relative" aria-label="Upload profile page">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/dashboard')}
-          className="mb-6"
-          aria-label="Back to dashboard"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
-        </Button>
+        <div className="flex justify-between items-center mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/dashboard')}
+            aria-label="Back to dashboard"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          
+          {/* DEV ONLY: Remove this button before production */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleResetPersonality}
+            className="border-orange-500 text-orange-600 hover:bg-orange-50"
+          >
+            🔄 Reset Onboarding (Dev)
+          </Button>
+        </div>
         
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-3" aria-label="Upload title">Upload Your Profile</h1>
