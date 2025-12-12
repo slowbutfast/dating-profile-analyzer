@@ -5,6 +5,16 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
+import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
@@ -13,7 +23,7 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, Upload, History, LogOut, Plus, Home, Info, User } from 'lucide-react';
+import { Heart, Upload, History, LogOut, Plus, Home, Info, User, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { FloatingHeartsBackground } from '@/components/ui/floating-hearts-background';
 
@@ -27,6 +37,9 @@ const Dashboard = () => {
   const { user, signOut } = useAuth();
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [analysisToDelete, setAnalysisToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -60,21 +73,49 @@ const Dashboard = () => {
     navigate(`/results/${id}`);
   };
 
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'Unknown date';
+  const handleDeleteClick = (e: React.MouseEvent, analysisId: string) => {
+    e.stopPropagation(); // Prevent navigation when clicking delete
+    setAnalysisToDelete(analysisId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!analysisToDelete) return;
+    
+    setDeleting(true);
     try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      if (isNaN(date.getTime())) {
-        return 'Invalid date';
-      }
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+      await api.deleteAnalysis(analysisToDelete);
+      
+      // Remove from local state
+      setAnalyses(analyses.filter(a => a.id !== analysisToDelete));
+      
+      toast({
+        title: 'Analysis deleted',
+        description: 'Your analysis has been permanently deleted.',
       });
-    } catch (error) {
-      return 'Invalid date';
+      
+      setDeleteDialogOpen(false);
+      setAnalysisToDelete(null);
+    } catch (error: any) {
+      console.error('Error deleting analysis:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete analysis',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -214,14 +255,17 @@ const Dashboard = () => {
                 {analyses.map((analysis) => (
                   <div
                     key={analysis.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:border-primary/40 transition-all cursor-pointer"
-                    onClick={() => handleViewAnalysis(analysis.id)}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Open analysis ${analysis.id}`}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleViewAnalysis(analysis.id) }}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:border-primary/40 transition-all"
+                    aria-label={`Analysis ${analysis.id}`}
                   >
-                    <div className="flex items-center gap-4">
+                    <div 
+                      className="flex items-center gap-4 flex-1 cursor-pointer"
+                      onClick={() => handleViewAnalysis(analysis.id)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Open analysis ${analysis.id}`}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleViewAnalysis(analysis.id) }}
+                    >
                       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center" aria-hidden>
                         <Heart className="w-5 h-5 text-primary" aria-hidden />
                       </div>
@@ -230,12 +274,26 @@ const Dashboard = () => {
                         <p className="text-sm text-muted-foreground">{formatDate(analysis.created_at)}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(analysis.status)}`} aria-label={`Status ${analysis.status}`}>
                         {analysis.status}
                       </span>
-                      <Button variant="ghost" size="sm" aria-label={`View results for ${analysis.id}`}>
-                        View Results
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleViewAnalysis(analysis.id)}
+                        aria-label={`View results for ${analysis.id}`}
+                      >
+                        View
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={(e) => handleDeleteClick(e, analysis.id)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        aria-label={`Delete analysis ${analysis.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -245,6 +303,29 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Analysis?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this analysis and all associated data including photos, text responses, and results. 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
