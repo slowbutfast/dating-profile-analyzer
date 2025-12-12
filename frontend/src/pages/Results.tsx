@@ -89,6 +89,23 @@ const Results = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const formatDate = (timestamp: any) => {
+    if (!timestamp) return 'Unknown date';
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      return 'Invalid date';
+    }
+  };
+
   useEffect(() => {
     loadAnalysisData();
   }, [id]);
@@ -300,7 +317,7 @@ const Results = () => {
             </Badge>
           </div>
           <p className="text-muted-foreground" aria-label="Analysis creation date">
-            Created on {new Date(analysis.created_at).toLocaleDateString()}
+            Created on {formatDate(analysis.created_at)}
           </p>
         </div>
 
@@ -390,6 +407,8 @@ const Results = () => {
             )}
           </div>
         )}
+
+
 
         {/* Text Analysis */}
         {textResponses.length > 0 && (
