@@ -20,8 +20,16 @@ router.post('/', upload.array('photos', 10), async (req: Request, res: Response)
     const { userId, bio, textResponses } = req.body;
     const files = req.files as Express.Multer.File[];
 
-    if (!userId || !bio || !files || files.length === 0) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!userId || !files || files.length === 0) {
+      return res.status(400).json({ error: 'Missing required fields: userId and photos are required' });
+    }
+    
+    if (files.length < 3) {
+      return res.status(400).json({ error: 'At least 3 photos are required' });
+    }
+    
+    if (files.length > 6) {
+      return res.status(400).json({ error: 'Maximum 6 photos allowed' });
     }
 
     // Validate all images before processing
@@ -54,7 +62,7 @@ router.post('/', upload.array('photos', 10), async (req: Request, res: Response)
     // Create analysis document
     const analysisRef = await db.collection('analyses').add({
       user_id: userId,
-      bio: bio.trim(),
+      bio: bio ? bio.trim() : '',
       status: 'pending',
       created_at: new Date(),
       updated_at: new Date(),
