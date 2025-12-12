@@ -36,31 +36,36 @@ const questions = [
     id: 'gender',
     question: 'How do you identify?',
     type: 'radio',
-    options: ['Male', 'Female', 'Non-binary', 'Prefer not to say'],
+    options: ['Male', 'Female', 'Non-binary', 'Prefer not to say', 'Other'],
+    allowOther: true,
   },
   {
     id: 'dating_goal',
     question: 'What are you looking for?',
     type: 'radio',
-    options: ['Long-term relationship', 'Short-term dating', 'New friends', 'Not sure yet'],
+    options: ['Long-term relationship', 'Short-term dating', 'New friends', 'Not sure yet', 'Other'],
+    allowOther: true,
   },
   {
     id: 'personality_type',
     question: 'How would you describe your personality?',
     type: 'radio',
-    options: ['Outgoing and social', 'Reserved and thoughtful', 'Adventurous and spontaneous', 'Calm and steady', 'Creative and expressive'],
+    options: ['Outgoing and social', 'Reserved and thoughtful', 'Adventurous and spontaneous', 'Calm and steady', 'Creative and expressive', 'Other'],
+    allowOther: true,
   },
   {
     id: 'conversation_style',
     question: 'Your conversation style:',
     type: 'radio',
-    options: ['Deep and meaningful', 'Light and playful', 'Intellectual and curious', 'Funny and entertaining', 'Balanced mix'],
+    options: ['Deep and meaningful', 'Light and playful', 'Intellectual and curious', 'Funny and entertaining', 'Balanced mix', 'Other'],
+    allowOther: true,
   },
   {
     id: 'humor_style',
     question: 'Your sense of humor:',
     type: 'radio',
-    options: ['Witty and clever', 'Sarcastic', 'Silly and goofy', 'Dry humor', 'Not very humorous'],
+    options: ['Witty and clever', 'Sarcastic', 'Silly and goofy', 'Dry humor', 'Not very humorous', 'Other'],
+    allowOther: true,
   },
   {
     id: 'dating_experience',
@@ -74,12 +79,6 @@ const questions = [
     type: 'textarea',
     placeholder: 'e.g., hiking, reading, cooking, travel, music...',
   },
-  {
-    id: 'ideal_match',
-    question: 'Describe your ideal match in a few words:',
-    type: 'textarea',
-    placeholder: 'What qualities are you looking for in a partner?',
-  },
 ];
 
 interface OnboardingProps {
@@ -92,8 +91,11 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
   const [showIntro, setShowIntro] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [otherInputs, setOtherInputs] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [showSkipWarning, setShowSkipWarning] = useState(false);
+  const [showSkipQuestionWarning, setShowSkipQuestionWarning] = useState(false);
+  const [hasSeenSkipQuestionWarning, setHasSeenSkipQuestionWarning] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -102,10 +104,23 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
 
   const handleAnswer = (value: string) => {
     setAnswers({ ...answers, [currentQuestion.id]: value });
+    // Clear other input if user selects a non-"Other" option
+    if (value !== 'Other') {
+      const newOtherInputs = { ...otherInputs };
+      delete newOtherInputs[currentQuestion.id];
+      setOtherInputs(newOtherInputs);
+    }
+  };
+
+  const handleOtherInput = (value: string) => {
+    setOtherInputs({ ...otherInputs, [currentQuestion.id]: value });
   };
 
   const handleNext = () => {
-    if (!answers[currentQuestion.id]) {
+    const currentAnswer = answers[currentQuestion.id];
+    
+    // Check if answer is required
+    if (!currentAnswer) {
       toast({
         title: 'Answer required',
         description: 'Please answer the question before continuing.',
@@ -114,6 +129,44 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
       return;
     }
     
+    // If "Other" is selected, check if they provided text
+    if (currentAnswer === 'Other' && !otherInputs[currentQuestion.id]?.trim()) {
+      toast({
+        title: 'Please specify',
+        description: 'Please provide your answer in the text field.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (currentStep < questions.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      handleSubmit();
+    }
+  };
+
+  const handleSkipQuestion = () => {
+    // Show warning only the first time user tries to skip a question
+    if (!hasSeenSkipQuestionWarning) {
+      setShowSkipQuestionWarning(true);
+      return;
+    }
+    
+    // Skip current question without answering
+    if (currentStep < questions.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      // If on last question, submit with whatever answers we have
+      handleSubmit();
+    }
+  };
+
+  const confirmSkipQuestion = () => {
+    setShowSkipQuestionWarning(false);
+    setHasSeenSkipQuestionWarning(true);
+    
+    // Now actually skip the question
     if (currentStep < questions.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -139,10 +192,18 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
 
     setLoading(true);
     try {
+      // Merge answers with "Other" inputs
+      const finalAnswers = { ...answers };
+      Object.keys(otherInputs).forEach(key => {
+        if (answers[key] === 'Other' && otherInputs[key]) {
+          finalAnswers[key] = otherInputs[key];
+        }
+      });
+
       // Save personality data to Firestore
       const personalityRef = doc(db, 'user_personalities', user.uid);
       await setDoc(personalityRef, {
-        ...answers,
+        ...finalAnswers,
         user_id: user.uid,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
@@ -181,8 +242,10 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
     if (isOpen) {
       setShowIntro(true);
       setCurrentStep(0);
+      setHasSeenSkipQuestionWarning(false); // Reset the warning flag when reopening
     } else if (!loading) {
-      onSkip();
+      // Show warning when user tries to close with X
+      setShowSkipWarning(true);
     }
   };
 
@@ -258,7 +321,7 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
 
               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
                 <p className="text-sm text-foreground">
-                  <strong>⏱️ Takes less than 2 minutes</strong> • 9 quick questions
+                  <strong>⏱️ Takes less than 2 minutes</strong> • 8 quick questions
                 </p>
               </div>
 
@@ -269,7 +332,7 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
                   disabled={loading}
                   aria-label="Skip personality assessment"
                 >
-                  Skip for now
+                  Skip All Questions
                 </Button>
 
                 <Button
@@ -298,20 +361,37 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
                 </Label>
 
                 {currentQuestion.type === 'radio' && (
-                  <RadioGroup
-                    value={answers[currentQuestion.id] || ''}
-                    onValueChange={handleAnswer}
-                    aria-label={currentQuestion.question}
-                  >
-                    {currentQuestion.options?.map((option) => (
-                      <div key={option} className="flex items-center space-x-2">
-                        <RadioGroupItem value={option} id={option} />
-                        <Label htmlFor={option} className="cursor-pointer font-normal">
-                          {option}
-                        </Label>
+                  <>
+                    <RadioGroup
+                      value={answers[currentQuestion.id] || ''}
+                      onValueChange={handleAnswer}
+                      aria-label={currentQuestion.question}
+                    >
+                      {currentQuestion.options?.map((option) => (
+                        <div key={option} className="flex items-center space-x-2">
+                          <RadioGroupItem value={option} id={option} />
+                          <Label htmlFor={option} className="cursor-pointer font-normal">
+                            {option}
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                    
+                    {/* Show text input when "Other" is selected */}
+                    {answers[currentQuestion.id] === 'Other' && (
+                      <div className="mt-3 pl-6">
+                        <Textarea
+                          value={otherInputs[currentQuestion.id] || ''}
+                          onChange={(e) => handleOtherInput(e.target.value)}
+                          placeholder="Please specify..."
+                          rows={2}
+                          maxLength={200}
+                          className="w-full"
+                          aria-label="Specify other answer"
+                        />
                       </div>
-                    ))}
-                  </RadioGroup>
+                    )}
+                  </>
                 )}
 
                 {currentQuestion.type === 'textarea' && (
@@ -337,23 +417,25 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
                   Back
                 </Button>
 
-                <Button
-                  variant="ghost"
-                  onClick={handleSkipClick}
-                  disabled={loading}
-                  aria-label="Skip personality assessment"
-                >
-                  Skip for now
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={handleSkipQuestion}
+                    disabled={loading}
+                    aria-label="Skip this question"
+                  >
+                    Skip Question
+                  </Button>
 
-                <Button
-                  onClick={handleNext}
-                  disabled={loading || !answers[currentQuestion.id]}
-                  aria-label={currentStep === questions.length - 1 ? "Submit answers" : "Next question"}
-                >
-                  {loading ? 'Saving...' : currentStep === questions.length - 1 ? 'Complete' : 'Next'}
-                  {!loading && currentStep < questions.length - 1 && <ArrowRight className="w-4 h-4 ml-2" />}
-                </Button>
+                  <Button
+                    onClick={handleNext}
+                    disabled={loading || !answers[currentQuestion.id]}
+                    aria-label={currentStep === questions.length - 1 ? "Submit answers" : "Next question"}
+                  >
+                    {loading ? 'Saving...' : currentStep === questions.length - 1 ? 'Complete' : 'Next'}
+                    {!loading && currentStep < questions.length - 1 && <ArrowRight className="w-4 h-4 ml-2" />}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -398,6 +480,43 @@ const Onboarding = ({ open, onComplete, onSkip }: OnboardingProps) => {
               className="bg-primary hover:bg-primary/90"
             >
               Continue Assessment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Skip Question Warning Dialog (First Time Only) */}
+      <AlertDialog open={showSkipQuestionWarning} onOpenChange={setShowSkipQuestionWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-6 h-6 text-orange-500" />
+              <AlertDialogTitle>Skip This Question?</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                <strong className="text-foreground">Note:</strong> Skipping questions will make your personality profile less complete.
+              </p>
+              <p className="text-sm">
+                The more questions you answer, the better we can personalize your analysis. However, you can skip individual questions if needed.
+              </p>
+              <p className="text-sm font-medium text-foreground">
+                This warning will only show once.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => setShowSkipQuestionWarning(false)}
+              className="bg-transparent hover:bg-muted"
+            >
+              Go Back
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmSkipQuestion}
+              className="bg-orange-500 hover:bg-orange-600"
+            >
+              Skip This Question
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
