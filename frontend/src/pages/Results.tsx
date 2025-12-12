@@ -210,10 +210,10 @@ const Results = () => {
   // Demo results content
   if (!analysis) {
     return (
-      <div className="min-h-screen flex items-center justify-center" role="main" aria-label="Demo results">
+      <div className="min-h-screen flex items-center justify-center" role="main" aria-label="No analysis found">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Demo Results</h2>
-          <p className="text-muted-foreground mb-4">Supabase is disabled. This is a demo view.</p>
+          <h2 className="text-xl font-semibold mb-2">No Analysis Found</h2>
+          <p className="text-muted-foreground mb-4">Unable to load analysis data. Please try uploading again.</p>
         </div>
       </div>
     );
