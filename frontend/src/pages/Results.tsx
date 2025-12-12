@@ -89,23 +89,6 @@ const Results = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'Unknown date';
-    try {
-      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-      if (isNaN(date.getTime())) {
-        return 'Invalid date';
-      }
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-      });
-    } catch (error) {
-      return 'Invalid date';
-    }
-  };
-
   useEffect(() => {
     loadAnalysisData();
   }, [id]);
@@ -291,12 +274,12 @@ const Results = () => {
           </Button>
           <Button 
             variant="ghost" 
-            size="icon"
             onClick={() => setShowDeleteDialog(true)}
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-10 w-10 p-0"
             aria-label="Delete analysis"
+            title="Delete this analysis"
           >
-            <Trash2 className="h-5 w-5" />
+            <Trash2 className="h-6 w-6" />
           </Button>
         </div>
 
@@ -317,7 +300,7 @@ const Results = () => {
             </Badge>
           </div>
           <p className="text-muted-foreground" aria-label="Analysis creation date">
-            Created on {formatDate(analysis.created_at)}
+            Created on {new Date(analysis.created_at).toLocaleDateString()}
           </p>
         </div>
 
@@ -407,8 +390,6 @@ const Results = () => {
             )}
           </div>
         )}
-
-
 
         {/* Text Analysis */}
         {textResponses.length > 0 && (
