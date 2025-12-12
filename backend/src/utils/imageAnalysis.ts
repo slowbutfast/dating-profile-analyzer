@@ -1,16 +1,23 @@
 import sharp from 'sharp';
 import { Jimp } from 'jimp';
 import * as canvas from 'canvas';
-import '@tensorflow/tfjs-backend-cpu';
-import '@tensorflow/tfjs';
-import * as faceapi from '@vladmandic/face-api';
 import path from 'path';
 import fs from 'fs';
 
-// Setup canvas for face-api
-const { Canvas, Image, ImageData } = canvas;
-// @ts-ignore
-faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
+// Conditionally import face-api to avoid Node 24 issues
+let faceapi: any = null;
+let faceApiError: Error | null = null;
+
+try {
+  faceapi = require('@vladmandic/face-api');
+  const { Canvas, Image, ImageData } = canvas;
+  // @ts-ignore
+  faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
+} catch (error: any) {
+  console.warn('⚠️ Face-api could not be loaded:', error.message);
+  console.warn('⚠️ Face detection will be disabled');
+  faceApiError = error;
+}
 
 let modelsLoaded = false;
 
@@ -19,6 +26,12 @@ let modelsLoaded = false;
  */
 export async function loadModels(): Promise<void> {
   if (modelsLoaded) return;
+  
+  if (!faceapi) {
+    console.warn('⚠️ Face-api is disabled, skipping model loading');
+    modelsLoaded = true;
+    return;
+  }
 
   try {
     const modelPath = path.join(__dirname, '../../models');
@@ -269,6 +282,17 @@ export async function detectSmile(imageBuffer: Buffer): Promise<{
   };
 }> {
   try {
+    // Check if face-api is available
+    if (!faceapi) {
+      console.warn('⚠️ Face detection disabled, returning default smile score');
+      return {
+        score: 50,
+        hasSmile: false,
+        confidence: 'no-face',
+        faceDetected: false,
+      };
+    }
+
     // Ensure models are loaded
     await loadModels();
 
