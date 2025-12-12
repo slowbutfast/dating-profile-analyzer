@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { db } from "../config/firebase";
+import { FieldValue } from "firebase-admin/firestore";
 import { analyzeTextWithLLM, getFallbackAnalysis } from "../utils/llmAnalyzer";
 import {
   validateTextResponse,
@@ -128,7 +129,7 @@ router.post("/analyze", async (req: AuthRequest, res: Response) => {
       analysis_id: analysisId,
       question: textData.question,
       user_answer: sanitizedAnswer,
-      created_at: new Date(),
+      created_at: FieldValue.serverTimestamp(),
       personality_context: feedback.personality_context,
     };
 
@@ -143,7 +144,7 @@ router.post("/analyze", async (req: AuthRequest, res: Response) => {
       .doc(analysisId)
       .set({
         ...feedbackDoc,
-        created_at: new Date(),
+        created_at: FieldValue.serverTimestamp(),
       });
 
     // Return feedback to client

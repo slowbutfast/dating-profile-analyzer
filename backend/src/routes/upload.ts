@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../config/firebase';
+import { FieldValue } from 'firebase-admin/firestore';
 import multer from 'multer';
 import { validateImageFormat } from '../utils/imageValidator';
 import * as fs from 'fs';
@@ -64,8 +65,8 @@ router.post('/', upload.array('photos', 10), async (req: Request, res: Response)
       user_id: userId,
       bio: bio ? bio.trim() : '',
       status: 'pending',
-      created_at: new Date(),
-      updated_at: new Date(),
+      created_at: FieldValue.serverTimestamp(),
+      updated_at: FieldValue.serverTimestamp(),
     });
 
     const analysisId = analysisRef.id;
@@ -95,7 +96,7 @@ router.post('/', upload.array('photos', 10), async (req: Request, res: Response)
         photo_url: localUrl,
         storage_path: filePath,
         order_index: index,
-        created_at: new Date(),
+        created_at: FieldValue.serverTimestamp(),
       });
 
       return photoDoc.id;
@@ -107,7 +108,7 @@ router.post('/', upload.array('photos', 10), async (req: Request, res: Response)
         analysis_id: analysisId,
         question: response.question,
         answer: response.answer,
-        created_at: new Date(),
+        created_at: FieldValue.serverTimestamp(),
       });
     }) || [];
 
