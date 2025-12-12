@@ -5,6 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, 
@@ -74,6 +84,8 @@ const Results = () => {
   const [imageAnalysisPhotos, setImageAnalysisPhotos] = useState<PhotoWithAnalysis[]>([]);
   const [analyzingImages, setAnalyzingImages] = useState(false);
   const [hasImageAnalysis, setHasImageAnalysis] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -184,6 +196,32 @@ const Results = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+    
+    setDeleting(true);
+    try {
+      await api.deleteAnalysis(id);
+      
+      toast({
+        title: 'Analysis deleted',
+        description: 'Your analysis has been permanently deleted.',
+      });
+      
+      navigate('/dashboard');
+    } catch (error: any) {
+      console.error('Error deleting analysis:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete analysis',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   const renderMetricScore = (label: string, score: number, description?: string) => (
     <div className="space-y-2" role="group" aria-label={`${label} score`}>
       <div className="flex items-center justify-between">
@@ -230,9 +268,18 @@ const Results = () => {
       
       <div className="container mx-auto px-4 py-8 max-w-6xl relative">
         <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" onClick={() => navigate('/')} aria-label="Back to Dashboard">
+          <Button variant="ghost" onClick={() => navigate('/dashboard')} aria-label="Back to Dashboard">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setShowDeleteDialog(true)}
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            aria-label="Delete analysis"
+          >
+            <Trash2 className="h-5 w-5" />
           </Button>
         </div>
 
@@ -417,6 +464,29 @@ const Results = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Delete Analysis Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Analysis?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this analysis and all associated data including photos, text responses, and results. 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDelete} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90" 
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
