@@ -13,6 +13,7 @@ import Upload from "./pages/Upload";
 import Results from "./pages/Results";
 import Profile from "./pages/Profile";
 import TestTextAnalysis from "./pages/TestTextAnalysis";
+import TestResultsVisualization from "./pages/TestResultsVisualization";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,14 @@ const App = () => (
               }
             />
             <Route
+              path="/profile-analysis/:id"
+              element={
+                <ProtectedRoute>
+                  <Results />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/profile"
               element={
                 <ProtectedRoute>
@@ -64,6 +73,22 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <TestTextAnalysis />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/test/results-visualization"
+              element={
+                <ProtectedRoute>
+                  <TestResultsVisualization />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/test/results-visualization/:profileId"
+              element={
+                <ProtectedRoute>
+                  <TestResultsVisualization />
                 </ProtectedRoute>
               }
             />
