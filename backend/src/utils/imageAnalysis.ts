@@ -4,7 +4,7 @@ import * as canvas from 'canvas';
 import path from 'path';
 import fs from 'fs';
 
-// Conditionally import face-api to avoid Node 24 issues
+// Conditionally import face-api to avoid Node 22 issues with tfjs-node
 let faceapi: any = null;
 let faceApiError: Error | null = null;
 
