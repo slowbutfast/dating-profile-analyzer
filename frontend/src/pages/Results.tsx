@@ -344,61 +344,7 @@ const Results = () => {
           </div>
         )}
 
-        {/* Photo Analysis */}
-        {photos.length > 0 && (
-          <Card className="mb-8" aria-label="Photo analysis section">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2" aria-label="Photo Analysis title">
-                <ImageIcon className="w-5 h-5" aria-hidden />
-                Photo Analysis
-              </CardTitle>
-              <CardDescription>
-                Detailed analysis of your {photos.length} photos
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6">
-                {photos.map((photo, index) => (
-                  <div key={photo.id} className="space-y-4" aria-label={`Photo ${index + 1} analysis`}>
-                    <div className="flex items-start gap-4">
-                      <div className="w-32 h-32 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                        <img
-                          src={photo.photo_url}
-                          alt={`Photo ${index + 1}`}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.currentTarget.src = 'https://placehold.co/128x128?text=Photo';
-                          }}
-                        />
-                      </div>
-                      <div className="flex-1 space-y-4">
-                        <h4 className="font-semibold">Photo {index + 1}</h4>
-                        {photo.analysis_result && analysis.status === 'completed' ? (
-                          <div className="space-y-3">
-                            {renderMetricScore('Lighting Quality', photo.analysis_result.lighting || 0)}
-                            {renderMetricScore('Sharpness', photo.analysis_result.sharpness || 0)}
-                            {renderMetricScore('Face Visibility', photo.analysis_result.face_visibility || 0)}
-                            {renderMetricScore('Eye Contact', photo.analysis_result.eye_contact || 0)}
-                            {photo.analysis_result.notes && (
-                              <p className="text-sm text-muted-foreground pt-2">
-                                {photo.analysis_result.notes}
-                              </p>
-                            )}
-                          </div>
-                        ) : analysis.status === 'completed' ? (
-                          <p className="text-sm text-muted-foreground">No analysis data available</p>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">Analyzing...</p>
-                        )}
-                      </div>
-                    </div>
-                    {index < photos.length - 1 && <Separator />}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
 
         {/* Text Analysis */}
         {textResponses.length > 0 && (
