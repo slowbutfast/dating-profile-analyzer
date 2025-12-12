@@ -137,6 +137,21 @@ export const api = {
     return response.json();
   },
 
+  // Update analysis name
+  updateAnalysisName: async (analysisId: string, name: string) => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/analyses/${analysisId}/name`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update analysis name');
+    }
+
+    return response.json();
+  },
+
   // Health check (public, no auth needed)
   healthCheck: async () => {
     const response = await fetch(`${API_BASE_URL}/health`);
