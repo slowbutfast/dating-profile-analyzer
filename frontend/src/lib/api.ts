@@ -54,6 +54,21 @@ async function authenticatedFetch(
 }
 
 export const api = {
+  // Generic POST request
+  post: async (path: string, data: any = {}) => {
+    const response = await authenticatedFetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Request failed');
+    }
+
+    return response;
+  },
+
   // Upload profile
   upload: async (userId: string, photos: File[], bio: string, textResponses: any[]) => {
     const formData = new FormData();
@@ -193,6 +208,25 @@ export const api = {
         analysis_id: analysisId,
         question,
         answer,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to analyze text response');
+    }
+
+    return response.json();
+  },
+
+  // Analyze text without requiring analysis ID (for results page)
+  analyzeText: async (question: string, answer: string, responseId?: string) => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/text-analysis/analyze`, {
+      method: 'POST',
+      body: JSON.stringify({
+        question,
+        answer,
+        responseId,
       }),
     });
 

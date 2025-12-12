@@ -58,7 +58,7 @@ router.post("/analyze", async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const { question, answer } = req.body;
+    const { question, answer, responseId } = req.body;
 
     // Validate input
     if (!question || !answer) {
@@ -71,6 +71,39 @@ router.post("/analyze", async (req: AuthRequest, res: Response) => {
     const validation = validateTextResponse(answer);
     if (!validation.valid) {
       return res.status(400).json({ error: "Invalid input", errors: validation.errors });
+    }
+
+    // If responseId is provided, check if we already have cached feedback
+    if (responseId) {
+      try {
+        const existingFeedback = await db
+          .collection("text_feedback")
+          .doc(responseId)
+          .get();
+
+        if (existingFeedback.exists) {
+          const feedbackData = existingFeedback.data();
+          console.log(`✓ Using cached feedback for response ${responseId}`);
+          return res.json({
+            success: true,
+            cached: true,
+            feedback: {
+              analysisId: feedbackData?.analysis_id,
+              analysis: feedbackData?.analysis,
+              strengths: feedbackData?.strengths,
+              suggestions: feedbackData?.suggestions,
+              metrics: {
+                word_count: feedbackData?.word_count,
+                has_specific_examples: feedbackData?.has_specific_examples,
+              },
+              personality_context: feedbackData?.personality_context,
+            },
+          });
+        }
+      } catch (error) {
+        // If lookup fails, continue to analyze
+        console.log('Could not find cached feedback, will analyze');
+      }
     }
 
     // Schema validation
@@ -118,40 +151,52 @@ router.post("/analyze", async (req: AuthRequest, res: Response) => {
       feedback = getFallbackAnalysis(sanitizedAnswer, personality, question);
     }
 
-    // Create feedback document
-    const analysisId = `${userId}_${Date.now()}`;
+    // Create feedback document with unique ID based on response
+    const feedbackId = responseId || `${userId}_${Date.now()}`;
     const feedbackDoc = {
       analysis: feedback.analysis,
       strengths: feedback.strengths,
       suggestions: feedback.suggestions,
       word_count: metrics.word_count,
       has_specific_examples: metrics.has_specific_examples,
-      analysis_id: analysisId,
+      analysis_id: feedbackId,
       question: textData.question,
       user_answer: sanitizedAnswer,
-      created_at: FieldValue.serverTimestamp(),
       personality_context: feedback.personality_context,
     };
 
-    // Validate against schema
-    const validatedFeedback = TextFeedbackDocSchema.parse(feedbackDoc);
+    // Validate the structure (excluding server timestamp which is Firestore-specific)
+    TextFeedbackDocSchema.omit({ created_at: true }).parse(feedbackDoc);
 
-    // Save to Firestore under analyses/{userId}/text_feedback collection
+    // Save to Firestore - top-level text_feedback collection for easy lookup
     await db
-      .collection("analyses")
-      .doc(userId)
       .collection("text_feedback")
-      .doc(analysisId)
+      .doc(feedbackId)
       .set({
         ...feedbackDoc,
+        user_id: userId,
         created_at: FieldValue.serverTimestamp(),
       });
+
+    // Also save under user's analyses for organization
+    if (responseId) {
+      await db
+        .collection("analyses")
+        .doc(userId)
+        .collection("text_feedback")
+        .doc(feedbackId)
+        .set({
+          ...feedbackDoc,
+          created_at: FieldValue.serverTimestamp(),
+        });
+    }
 
     // Return feedback to client
     res.json({
       success: true,
+      cached: false,
       feedback: {
-        analysisId,
+        analysisId: feedbackId,
         analysis: feedback.analysis,
         strengths: feedback.strengths,
         suggestions: feedback.suggestions,
@@ -182,33 +227,66 @@ router.post("/analyze", async (req: AuthRequest, res: Response) => {
 
 /**
  * GET /api/text-analysis/:analysisId
- * Retrieves a specific text feedback document
+ * Retrieves a specific text feedback document (cached)
  */
 router.get("/:analysisId", async (req: AuthRequest, res: Response) => {
   try {
+    const { analysisId } = req.params;
+
+    // First try to get from top-level text_feedback collection
+    const feedbackSnap = await db
+      .collection("text_feedback")
+      .doc(analysisId)
+      .get();
+
+    if (feedbackSnap.exists) {
+      const data = feedbackSnap.data();
+      return res.json({
+        success: true,
+        cached: true,
+        feedback: {
+          analysisId: analysisId,
+          analysis: data?.analysis,
+          strengths: data?.strengths,
+          suggestions: data?.suggestions,
+          word_count: data?.word_count,
+          has_specific_examples: data?.has_specific_examples,
+          personality_context: data?.personality_context,
+          created_at: data?.created_at?.toDate?.() || new Date(),
+        },
+      });
+    }
+
+    // Fallback: try user-specific collection
     const userId = req.user?.uid;
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const { analysisId } = req.params;
-
-    const feedbackSnap = await db
+    const userFeedbackSnap = await db
       .collection("analyses")
       .doc(userId)
       .collection("text_feedback")
       .doc(analysisId)
       .get();
 
-    if (!feedbackSnap.exists) {
+    if (!userFeedbackSnap.exists) {
       return res.status(404).json({ error: "Feedback not found" });
     }
 
+    const data = userFeedbackSnap.data();
     res.json({
       success: true,
+      cached: true,
       feedback: {
-        ...feedbackSnap.data(),
-        created_at: feedbackSnap.data()?.created_at?.toDate?.() || new Date(),
+        analysisId: analysisId,
+        analysis: data?.analysis,
+        strengths: data?.strengths,
+        suggestions: data?.suggestions,
+        word_count: data?.word_count,
+        has_specific_examples: data?.has_specific_examples,
+        personality_context: data?.personality_context,
+        created_at: data?.created_at?.toDate?.() || new Date(),
       },
     });
   } catch (error) {

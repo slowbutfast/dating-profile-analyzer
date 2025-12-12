@@ -111,13 +111,31 @@ export async function analyzeTextWithLLM(
         .map((item: any) => {
           if (typeof item === "string") return item;
           if (typeof item === "object" && item !== null) {
-            // Handle objects like { title: "...", content: "..." } or { text: "..." }
-            return (
+            // Handle objects with various possible fields
+            // For suggestions: { actionable_suggestion, example, why_it_matters }
+            // For strengths: { title, content } or similar
+            const suggestion =
+              item.actionable_suggestion ||
               item.content ||
               item.text ||
               item.title ||
-              JSON.stringify(item)
-            ).toString();
+              item.suggestion ||
+              item.improvement;
+            
+            if (suggestion) {
+              // Optionally include example and why_it_matters for suggestions
+              if (item.example && item.why_it_matters) {
+                return `${suggestion} (Example: ${item.example})`;
+              } else if (item.example) {
+                return `${suggestion} (Example: ${item.example})`;
+              } else if (item.why_it_matters) {
+                return `${suggestion} (Why it matters: ${item.why_it_matters})`;
+              }
+              return suggestion;
+            }
+            
+            // Fallback: stringify the object
+            return JSON.stringify(item);
           }
           return String(item);
         });

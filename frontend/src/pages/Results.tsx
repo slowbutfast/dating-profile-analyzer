@@ -29,6 +29,8 @@ import {
 import { api } from '@/lib/api';
 import { PhotoAnalysisCard } from '@/components/PhotoAnalysisCard';
 import { AnalysisSummary } from '@/components/AnalysisSummary';
+import { ResultsContent } from '@/components/ResultsContent';
+import { useMockData } from '@/contexts/MockDataContext';
 import type { PhotoWithAnalysis } from '@/types/imageAnalysis';
 
 interface Analysis {
@@ -75,7 +77,8 @@ interface TextResponse {
 
 const Results = () => {
   const { id } = useParams<{ id: string }>();
-  // Remove all supabase references and related logic
+  const { mockData } = useMockData();
+  // Remove all subase references and related logic
   // Demo state
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -84,14 +87,28 @@ const Results = () => {
   const [imageAnalysisPhotos, setImageAnalysisPhotos] = useState<PhotoWithAnalysis[]>([]);
   const [analyzingImages, setAnalyzingImages] = useState(false);
   const [hasImageAnalysis, setHasImageAnalysis] = useState(false);
+  const [textFeedback, setTextFeedback] = useState<Record<string, any>>({});
+  const [analyzingText, setAnalyzingText] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
+    // If mock data is provided via context, use it immediately
+    if (mockData) {
+      setAnalysis(mockData.analysis);
+      setPhotos(mockData.photos);
+      setTextResponses(mockData.textResponses);
+      setTextFeedback(mockData.textFeedback);
+      setImageAnalysisPhotos(mockData.imageAnalysisPhotos);
+      setLoading(false);
+      return;
+    }
+    
+    // Otherwise, load real data from API
     loadAnalysisData();
-  }, [id]);
+  }, [id, mockData]);
 
   // Separate effect for polling with timeout
   useEffect(() => {
@@ -134,6 +151,24 @@ const Results = () => {
       
       // Also load image analysis if available
       await loadImageAnalysis();
+      
+      // Check if mock feedback exists in localStorage
+      const mockFeedback = localStorage.getItem(`mock_feedback_${id}`);
+      if (mockFeedback) {
+        try {
+          const parsedFeedback = JSON.parse(mockFeedback);
+          setTextFeedback(parsedFeedback);
+          // Clear localStorage after using it
+          localStorage.removeItem(`mock_feedback_${id}`);
+        } catch (error) {
+          console.log('Could not parse mock feedback');
+          // Load text feedback for real analysis
+          await loadTextFeedback(result.textResponses);
+        }
+      } else {
+        // Load text feedback for filled text responses
+        await loadTextFeedback(result.textResponses);
+      }
     } catch (error: any) {
       console.error('Error loading analysis:', error);
       toast({
@@ -146,6 +181,42 @@ const Results = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTextFeedback = async (responses: TextResponse[]) => {
+    if (!responses || responses.length === 0) return;
+    
+    setAnalyzingText(true);
+    try {
+      const feedback: Record<string, any> = {};
+      
+      // Analyze each text response that has content
+      for (const response of responses) {
+        if (response.answer && response.answer.trim().length > 0) {
+          try {
+            // Try to fetch existing feedback first (for cached results)
+            try {
+              const cachedResponse = await api.getTextFeedback(response.id);
+              // Extract just the feedback object from the response
+              feedback[response.id] = cachedResponse.feedback;
+            } catch (error) {
+              // If no cached feedback, analyze with LLM
+              // Pass responseId so backend can cache it
+              const result = await api.analyzeText(response.question, response.answer, response.id);
+              feedback[response.id] = result.feedback;
+            }
+          } catch (error) {
+            console.log(`Could not analyze response for question: ${response.question}`);
+          }
+        }
+      }
+      
+      setTextFeedback(feedback);
+    } catch (error: any) {
+      console.log('Text analysis not available:', error);
+    } finally {
+      setAnalyzingText(false);
     }
   };
 
@@ -392,58 +463,30 @@ const Results = () => {
         )}
 
         {/* Text Analysis */}
-        {textResponses.length > 0 && (
+        {(analysis?.bio || textResponses.length > 0) && (
           <Card aria-label="Text analysis section">
             <CardHeader>
               <CardTitle className="flex items-center gap-2" aria-label="Text Analysis title">
                 <MessageSquare className="w-5 h-5" aria-hidden />
-                Text Analysis
+                Profile Text Analysis
               </CardTitle>
               <CardDescription>
-                Analysis of your {textResponses.length} prompt responses
+                LLM-powered analysis of your bio and prompt responses
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                {textResponses.map((response, index) => (
-                  <div key={response.id} className="space-y-4" aria-label={`Response ${index + 1} analysis`}>
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">{response.question}</h4>
-                      <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg" aria-label={`Answer to question ${index + 1}`}>
-                        "{response.answer}"
-                      </p>
-                    </div>
-                    {response.analysis_result && analysis.status === 'completed' ? (
-                      <div className="space-y-3 pl-4 border-l-2 border-primary/20" aria-label={`Analysis metrics for response ${index + 1}`}>
-                        {renderMetricScore('Warmth', response.analysis_result.warmth || 0)}
-                        {renderMetricScore('Humor', response.analysis_result.humor || 0)}
-                        {renderMetricScore('Clarity', response.analysis_result.clarity || 0)}
-                        {renderMetricScore('Originality', response.analysis_result.originality || 0)}
-                        {renderMetricScore('Conversation Potential', response.analysis_result.conversation_potential || 0)}
-                        
-                        {response.analysis_result.strengths && (
-                          <div className="pt-2">
-                            <p className="text-sm font-medium text-green-600 mb-1">Strengths:</p>
-                            <p className="text-sm text-muted-foreground">{response.analysis_result.strengths}</p>
-                          </div>
-                        )}
-                        
-                        {response.analysis_result.improvements && (
-                          <div className="pt-2">
-                            <p className="text-sm font-medium text-orange-600 mb-1">Suggestions:</p>
-                            <p className="text-sm text-muted-foreground">{response.analysis_result.improvements}</p>
-                          </div>
-                        )}
-                      </div>
-                    ) : analysis.status === 'completed' ? (
-                      <p className="text-sm text-muted-foreground">No analysis data available</p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">Analyzing...</p>
-                    )}
-                    {index < textResponses.length - 1 && <Separator className="mt-6" />}
-                  </div>
-                ))}
-              </div>
+              <ResultsContent
+                analysis={analysis}
+                textResponses={textResponses}
+                textFeedback={textFeedback}
+                photos={photos}
+                imageAnalysisPhotos={imageAnalysisPhotos}
+                hasImageAnalysis={hasImageAnalysis}
+                analyzingImages={analyzingImages}
+                analyzingText={analyzingText}
+                onAnalyzeImages={handleAnalyzeImages}
+                showPhotosSection={false}
+              />
             </CardContent>
           </Card>
         )}
