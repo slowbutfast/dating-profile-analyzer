@@ -14,10 +14,16 @@ router.get('/user/:userId', async (req: Request, res: Response) => {
       .orderBy('created_at', 'desc')
       .get();
 
-    const analyses = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const analyses = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        // Convert Firestore timestamps to ISO strings for JSON serialization
+        created_at: data?.created_at?.toDate?.() || data?.created_at || null,
+        updated_at: data?.updated_at?.toDate?.() || data?.updated_at || null,
+      };
+    });
 
     res.json({ analyses });
   } catch (error: any) {
@@ -52,7 +58,14 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Analysis not found' });
     }
 
-    const analysis = { id: analysisDoc.id, ...analysisDoc.data() };
+    const analysisData = analysisDoc.data();
+    const analysis = { 
+      id: analysisDoc.id, 
+      ...analysisData,
+      // Convert Firestore timestamps to ISO strings for JSON serialization
+      created_at: analysisData?.created_at?.toDate?.() || analysisData?.created_at || null,
+      updated_at: analysisData?.updated_at?.toDate?.() || analysisData?.updated_at || null,
+    };
 
     // Get photos
     const photosSnapshot = await db
@@ -61,10 +74,14 @@ router.get('/:id', async (req: Request, res: Response) => {
       .orderBy('order_index', 'asc')
       .get();
 
-    const photos = photosSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const photos = photosSnapshot.docs.map(doc => {
+      const photoData = doc.data();
+      return {
+        id: doc.id,
+        ...photoData,
+        created_at: photoData?.created_at?.toDate?.() || photoData?.created_at || null,
+      };
+    });
 
     // Get text responses
     const textResponsesSnapshot = await db
@@ -73,10 +90,14 @@ router.get('/:id', async (req: Request, res: Response) => {
       .orderBy('created_at', 'asc')
       .get();
 
-    const textResponses = textResponsesSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const textResponses = textResponsesSnapshot.docs.map(doc => {
+      const textData = doc.data();
+      return {
+        id: doc.id,
+        ...textData,
+        created_at: textData?.created_at?.toDate?.() || textData?.created_at || null,
+      };
+    });
 
     res.json({
       analysis,
