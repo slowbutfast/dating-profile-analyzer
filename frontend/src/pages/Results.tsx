@@ -19,7 +19,6 @@ import {
 import { api } from '@/lib/api';
 import { PhotoAnalysisCard } from '@/components/PhotoAnalysisCard';
 import { AnalysisSummary } from '@/components/AnalysisSummary';
-import { TextFeedbackCard } from '@/components/TextFeedbackCard';
 import type { PhotoWithAnalysis } from '@/types/imageAnalysis';
 
 interface Analysis {
@@ -211,10 +210,10 @@ const Results = () => {
   // Demo results content
   if (!analysis) {
     return (
-      <div className="min-h-screen flex items-center justify-center" role="main" aria-label="No analysis found">
+      <div className="min-h-screen flex items-center justify-center" role="main" aria-label="Demo results">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">No Analysis Found</h2>
-          <p className="text-muted-foreground mb-4">Unable to load analysis data. Please try uploading again.</p>
+          <h2 className="text-xl font-semibold mb-2">Demo Results</h2>
+          <p className="text-muted-foreground mb-4">Supabase is disabled. This is a demo view.</p>
         </div>
       </div>
     );
@@ -364,14 +363,10 @@ const Results = () => {
                     <div className="flex items-start gap-4">
                       <div className="w-32 h-32 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                         <img
-                          src={photo.photo_url.startsWith('http') 
-                            ? photo.photo_url 
-                            : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001'}${photo.photo_url}`
-                          }
+                          src={photo.photo_url}
                           alt={`Photo ${index + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            console.error('Failed to load image:', photo.photo_url);
                             e.currentTarget.src = 'https://placehold.co/128x128?text=Photo';
                           }}
                         />
@@ -414,18 +409,41 @@ const Results = () => {
                 Text Analysis
               </CardTitle>
               <CardDescription>
-                Personality-aware analysis of your {textResponses.length} prompt responses
+                Analysis of your {textResponses.length} prompt responses
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
                 {textResponses.map((response, index) => (
-                  <div key={response.id}>
-                    {response.analysis_result ? (
-                      <TextFeedbackCard
-                        feedback={response.analysis_result}
-                        index={index + 1}
-                      />
+                  <div key={response.id} className="space-y-4" aria-label={`Response ${index + 1} analysis`}>
+                    <div className="space-y-2">
+                      <h4 className="font-semibold">{response.question}</h4>
+                      <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg" aria-label={`Answer to question ${index + 1}`}>
+                        "{response.answer}"
+                      </p>
+                    </div>
+                    {response.analysis_result && analysis.status === 'completed' ? (
+                      <div className="space-y-3 pl-4 border-l-2 border-primary/20" aria-label={`Analysis metrics for response ${index + 1}`}>
+                        {renderMetricScore('Warmth', response.analysis_result.warmth || 0)}
+                        {renderMetricScore('Humor', response.analysis_result.humor || 0)}
+                        {renderMetricScore('Clarity', response.analysis_result.clarity || 0)}
+                        {renderMetricScore('Originality', response.analysis_result.originality || 0)}
+                        {renderMetricScore('Conversation Potential', response.analysis_result.conversation_potential || 0)}
+                        
+                        {response.analysis_result.strengths && (
+                          <div className="pt-2">
+                            <p className="text-sm font-medium text-green-600 mb-1">Strengths:</p>
+                            <p className="text-sm text-muted-foreground">{response.analysis_result.strengths}</p>
+                          </div>
+                        )}
+                        
+                        {response.analysis_result.improvements && (
+                          <div className="pt-2">
+                            <p className="text-sm font-medium text-orange-600 mb-1">Suggestions:</p>
+                            <p className="text-sm text-muted-foreground">{response.analysis_result.improvements}</p>
+                          </div>
+                        )}
+                      </div>
                     ) : analysis.status === 'completed' ? (
                       <p className="text-sm text-muted-foreground">No analysis data available</p>
                     ) : (
