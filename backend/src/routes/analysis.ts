@@ -143,6 +143,40 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Update analysis name
+router.patch('/:id/name', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+      return res.status(400).json({ error: 'Invalid name provided' });
+    }
+
+    if (name.trim().length > 100) {
+      return res.status(400).json({ error: 'Name must be 100 characters or less' });
+    }
+
+    // Check if analysis exists
+    const analysisDoc = await db.collection('analyses').doc(id).get();
+    
+    if (!analysisDoc.exists) {
+      return res.status(404).json({ error: 'Analysis not found' });
+    }
+
+    // Update analysis name
+    await db.collection('analyses').doc(id).update({
+      name: name.trim(),
+      updated_at: new Date(),
+    });
+
+    res.json({ success: true, message: 'Analysis name updated successfully', name: name.trim() });
+  } catch (error: any) {
+    console.error('Error updating analysis name:', error);
+    res.status(500).json({ error: error.message || 'Failed to update analysis name' });
+  }
+});
+
 // Trigger comprehensive analysis (both text and image)
 router.post('/:id/analyze', async (req: Request, res: Response) => {
   try {

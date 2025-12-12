@@ -23,12 +23,14 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, Upload, History, LogOut, Plus, Home, Info, User, Trash2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Heart, Upload, History, LogOut, Plus, Home, Info, User, Trash2, Check, X, Edit2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { FloatingHeartsBackground } from '@/components/ui/floating-hearts-background';
 
 interface Analysis {
   id: string;
+  name?: string;
   status: string;
   created_at: any;
 }
@@ -40,6 +42,8 @@ const Dashboard = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [analysisToDelete, setAnalysisToDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -106,6 +110,52 @@ const Dashboard = () => {
     } finally {
       setDeleting(false);
     }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingName('');
+  };
+
+  const handleSaveEdit = async (analysisId: string) => {
+    if (!editingName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Name cannot be empty',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await api.updateAnalysisName(analysisId, editingName.trim());
+      
+      // Update local state
+      setAnalyses(analyses.map(a => 
+        a.id === analysisId ? { ...a, name: editingName.trim() } : a
+      ));
+      
+      toast({
+        title: 'Name updated',
+        description: 'Analysis name has been updated successfully.',
+      });
+      
+      setEditingId(null);
+      setEditingName('');
+    } catch (error: any) {
+      console.error('Error updating analysis name:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update analysis name',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleNameDoubleClick = (e: React.MouseEvent, analysis: Analysis) => {
+    e.stopPropagation();
+    setEditingId(analysis.id);
+    setEditingName(analysis.name || `Analysis ${analysis.id.slice(0, 8)}`);
   };
 
   const formatDate = (timestamp: any) => {
@@ -259,18 +309,76 @@ const Dashboard = () => {
                     aria-label={`Analysis ${analysis.id}`}
                   >
                     <div 
-                      className="flex items-center gap-4 flex-1 cursor-pointer"
-                      onClick={() => handleViewAnalysis(analysis.id)}
+                      className="flex items-center gap-4 flex-1"
+                      onClick={() => editingId !== analysis.id && handleViewAnalysis(analysis.id)}
                       role="button"
                       tabIndex={0}
                       aria-label={`Open analysis ${analysis.id}`}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleViewAnalysis(analysis.id) }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' && editingId !== analysis.id) handleViewAnalysis(analysis.id) }}
+                      style={{ cursor: editingId === analysis.id ? 'default' : 'pointer' }}
                     >
                       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center" aria-hidden>
                         <Heart className="w-5 h-5 text-primary" aria-hidden />
                       </div>
-                      <div>
-                        <p className="font-medium">Analysis {analysis.id.slice(0, 8)}</p>
+                      <div className="flex-1">
+                        {editingId === analysis.id ? (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-3 max-w-md">
+                              <Input 
+                                value={editingName} 
+                                onChange={(e) => setEditingName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleSaveEdit(analysis.id);
+                                  }
+                                  if (e.key === 'Escape') handleCancelEdit();
+                                }}
+                                className="h-auto py-0 px-0 border-0 border-b border-primary rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary font-medium text-sm bg-transparent flex-1"
+                                autoFocus
+                                aria-label="Edit analysis name"
+                              />
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 flex-shrink-0"
+                                onClick={() => handleSaveEdit(analysis.id)}
+                                aria-label="Save name"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted flex-shrink-0"
+                                onClick={handleCancelEdit}
+                                aria-label="Cancel edit"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">{formatDate(analysis.created_at)}</p>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 group">
+                            <p 
+                              className="font-medium hover:text-primary transition-colors" 
+                              onDoubleClick={(e) => handleNameDoubleClick(e, analysis)}
+                              title="Double-click to edit"
+                            >
+                              {analysis.name || `Analysis ${analysis.id.slice(0, 8)}`}
+                            </p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => handleNameDoubleClick(e, analysis)}
+                              aria-label="Edit name"
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
                         <p className="text-sm text-muted-foreground">{formatDate(analysis.created_at)}</p>
                       </div>
                     </div>
