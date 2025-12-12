@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -24,7 +25,9 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
-  Sparkles
+  Sparkles,
+  Check,
+  X
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { PhotoAnalysisCard } from '@/components/PhotoAnalysisCard';
@@ -34,6 +37,7 @@ import type { PhotoWithAnalysis } from '@/types/imageAnalysis';
 interface Analysis {
   id: string;
   user_id: string;
+  name?: string;
   bio: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   created_at: any;
@@ -86,6 +90,8 @@ const Results = () => {
   const [hasImageAnalysis, setHasImageAnalysis] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -222,6 +228,51 @@ const Results = () => {
     }
   };
 
+  const handleStartEditName = () => {
+    setEditingName(true);
+    setNameInput(analysis?.name || `Analysis ${id?.slice(0, 8)}`);
+  };
+
+  const handleCancelEditName = () => {
+    setEditingName(false);
+    setNameInput('');
+  };
+
+  const handleSaveEditName = async () => {
+    if (!id || !nameInput.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Name cannot be empty',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await api.updateAnalysisName(id, nameInput.trim());
+      
+      // Update local state
+      if (analysis) {
+        setAnalysis({ ...analysis, name: nameInput.trim() });
+      }
+      
+      toast({
+        title: 'Name updated',
+        description: 'Analysis name has been updated successfully.',
+      });
+      
+      setEditingName(false);
+      setNameInput('');
+    } catch (error: any) {
+      console.error('Error updating analysis name:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update analysis name',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const renderMetricScore = (label: string, score: number, description?: string) => (
     <div className="space-y-2" role="group" aria-label={`${label} score`}>
       <div className="flex items-center justify-between">
@@ -286,7 +337,54 @@ const Results = () => {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold" aria-label="Profile Analysis title">Profile Analysis</h1>
+            {editingName ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <Input 
+                    value={nameInput} 
+                    onChange={(e) => setNameInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveEditName();
+                      }
+                      if (e.key === 'Escape') handleCancelEditName();
+                    }}
+                    className="!text-3xl !font-bold !h-auto !py-0 !px-0 !m-0 border-0 border-b-2 border-primary rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-primary bg-transparent !leading-tight"
+                    style={{ fontSize: '1.875rem', lineHeight: '2.25rem', width: 'fit-content', minWidth: '300px' }}
+                    autoFocus
+                    aria-label="Edit analysis name"
+                  />
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="text-green-600 hover:text-green-700 hover:bg-green-50 flex-shrink-0"
+                    onClick={handleSaveEditName}
+                    aria-label="Save name"
+                  >
+                    <Check className="h-5 w-5" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted flex-shrink-0"
+                    onClick={handleCancelEditName}
+                    aria-label="Cancel edit"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <h1 
+                className="text-3xl font-bold hover:text-primary transition-colors cursor-pointer" 
+                aria-label="Analysis name"
+                onDoubleClick={handleStartEditName}
+                title="Double-click to edit"
+              >
+                {analysis.name || 'Profile Analysis'}
+              </h1>
+            )}
             <Badge 
               variant={analysis.status === 'completed' ? 'default' : 'secondary'}
               className={
