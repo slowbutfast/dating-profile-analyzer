@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../config/firebase';
 import multer from 'multer';
-import { validateImageFormat } from '../utils/imageAnalysis';
+import { validateImageFormat } from '../utils/imageValidator';
 import * as fs from 'fs';
 import * as path from 'path';
 
