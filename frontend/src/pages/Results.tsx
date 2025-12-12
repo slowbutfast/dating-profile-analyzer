@@ -363,10 +363,14 @@ const Results = () => {
                     <div className="flex items-start gap-4">
                       <div className="w-32 h-32 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                         <img
-                          src={photo.photo_url}
+                          src={photo.photo_url.startsWith('http') 
+                            ? photo.photo_url 
+                            : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001'}${photo.photo_url}`
+                          }
                           alt={`Photo ${index + 1}`}
                           className="w-full h-full object-cover"
                           onError={(e) => {
+                            console.error('Failed to load image:', photo.photo_url);
                             e.currentTarget.src = 'https://placehold.co/128x128?text=Photo';
                           }}
                         />

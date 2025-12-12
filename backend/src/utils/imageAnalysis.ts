@@ -266,7 +266,7 @@ export async function analyzeLighting(imageBuffer: Buffer): Promise<{
 
 /**
  * Detect smile and facial expressions
- * Falls back to safe defaults if face detection fails
+ * Uses a continuous scoring system from 0-100 based on facial expression analysis
  */
 export async function detectSmile(imageBuffer: Buffer): Promise<{
   score: number;
@@ -299,14 +299,29 @@ export async function detectSmile(imageBuffer: Buffer): Promise<{
     // Convert buffer to canvas image
     const img = await canvas.loadImage(imageBuffer);
     
-    // Detect faces with expressions
-    const detections = await faceapi
-      .detectAllFaces(img as any, new faceapi.TinyFaceDetectorOptions())
+    // Try with multiple detection sensitivities for better face detection
+    let detections = await faceapi
+      .detectAllFaces(img as any, new faceapi.TinyFaceDetectorOptions({
+        inputSize: 416,
+        scoreThreshold: 0.3
+      }))
       .withFaceLandmarks()
       .withFaceExpressions();
 
+    // If no faces found, try with more sensitive settings
     if (!detections || detections.length === 0) {
-      console.log('No face detected in image');
+      console.log('Retrying face detection with lower threshold...');
+      detections = await faceapi
+        .detectAllFaces(img as any, new faceapi.TinyFaceDetectorOptions({
+          inputSize: 512,
+          scoreThreshold: 0.2
+        }))
+        .withFaceLandmarks()
+        .withFaceExpressions();
+    }
+
+    if (!detections || detections.length === 0) {
+      console.log('No face detected in image after multiple attempts');
       return {
         score: 0,
         hasSmile: false,
@@ -319,28 +334,72 @@ export async function detectSmile(imageBuffer: Buffer): Promise<{
     const detection = detections[0];
     const expressions = detection.expressions;
 
-    // Calculate smile score based on happiness expression
-    const happyScore = expressions.happy * 100;
-    
-    // Combine expressions for a more nuanced smile score
-    // Happy contributes positively, neutral is baseline, sad/angry reduce score
-    let smileScore = happyScore;
-    smileScore -= expressions.sad * 20;
-    smileScore -= expressions.angry * 20;
-    smileScore += expressions.surprised * 10; // Slight positive
-    
-    smileScore = Math.max(0, Math.min(100, smileScore));
+    // Log raw expression values for debugging
+    console.log('Expression values:', {
+      happy: (expressions.happy * 100).toFixed(2),
+      neutral: (expressions.neutral * 100).toFixed(2),
+      sad: (expressions.sad * 100).toFixed(2),
+      angry: (expressions.angry * 100).toFixed(2),
+      surprised: (expressions.surprised * 100).toFixed(2),
+      disgusted: (expressions.disgusted * 100).toFixed(2),
+      fearful: (expressions.fearful * 100).toFixed(2)
+    });
 
+    // Balanced smile scoring - discerning but not overly harsh
+    // Makes high scores achievable but meaningful
+    
+    let smileScore = 0;
+    const happyPercent = expressions.happy * 100;
+    
+    // Progressive scaling with sensitivity at high values
+    if (happyPercent > 85) {
+      // Very high happiness: moderate compression (85-100 maps to 80-95)
+      const normalizedHappy = (happyPercent - 85) / 15; // 0-1 range for 85-100%
+      smileScore += 80 + (Math.pow(normalizedHappy, 0.8) * 15);
+    } else if (happyPercent > 60) {
+      // High happiness: slight compression (60-85 maps to 60-80)
+      const normalizedHappy = (happyPercent - 60) / 25;
+      smileScore += 60 + (normalizedHappy * 20);
+    } else if (happyPercent > 30) {
+      // Mid happiness: linear (30-60 maps to 30-60)
+      smileScore += happyPercent;
+    } else {
+      // Low happiness: slight compression (0-30 maps to 0-30)
+      smileScore += happyPercent * 0.95;
+    }
+    
+    // Balanced bonuses from other expressions
+    smileScore += expressions.surprised * 6;
+    smileScore += expressions.neutral * 10;
+    
+    // Moderate penalties for negative emotions
+    smileScore -= expressions.sad * 15;
+    smileScore -= expressions.angry * 15;
+    smileScore -= expressions.disgusted * 12;
+    smileScore -= expressions.fearful * 12;
+    
+    // Small bonus for exceptional happiness (97%+)
+    if (expressions.happy > 0.97) {
+      smileScore += (expressions.happy - 0.97) * 100; // Max +3 points
+    }
+    
+    // Store raw score before final adjustments
+    const rawScore = smileScore;
+    
+    // Soft cap - allow up to 98 but make it rare
+    smileScore = Math.max(0, Math.min(98, smileScore));
+
+    // Continuous confidence levels (no hard cutoffs, just descriptive labels)
     let confidence: 'no-face' | 'neutral' | 'slight-smile' | 'clear-smile';
-    if (smileScore >= 60) confidence = 'clear-smile';
-    else if (smileScore >= 30) confidence = 'slight-smile';
+    if (smileScore >= 70) confidence = 'clear-smile';
+    else if (smileScore >= 45) confidence = 'slight-smile';
     else confidence = 'neutral';
 
-    console.log(`Smile detection completed: score=${smileScore}, confidence=${confidence}`);
+    console.log(`Smile detection: raw=${rawScore.toFixed(2)}, final=${smileScore.toFixed(2)}, confidence=${confidence}`);
     
     return {
       score: Math.round(smileScore),
-      hasSmile: smileScore >= 30,
+      hasSmile: smileScore >= 45,
       confidence,
       faceDetected: true,
       expressions: {
@@ -353,7 +412,7 @@ export async function detectSmile(imageBuffer: Buffer): Promise<{
     };
   } catch (error) {
     console.error('⚠️  Error in smile detection, using fallback:', error);
-    // Return safe default instead of throwing - don't let smile detection block the entire analysis
+    // Return safe default instead of throwing
     return {
       score: 50,
       hasSmile: false,

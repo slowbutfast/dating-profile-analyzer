@@ -11,14 +11,23 @@ interface PhotoAnalysisCardProps {
 export function PhotoAnalysisCard({ photo }: PhotoAnalysisCardProps) {
   const { analysis } = photo;
 
+  // Construct full image URL
+  const imageUrl = photo.photoUrl.startsWith('http') 
+    ? photo.photoUrl 
+    : `${import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:3001'}${photo.photoUrl}`;
+
   if (!analysis) {
     return (
       <Card>
         <CardContent className="p-4">
           <img
-            src={photo.photoUrl}
+            src={imageUrl}
             alt="Profile photo"
             className="w-full h-48 object-cover rounded-lg mb-4"
+            onError={(e) => {
+              console.error('Failed to load image:', photo.photoUrl);
+              e.currentTarget.src = 'https://placehold.co/400x300?text=Photo';
+            }}
           />
           <p className="text-sm text-gray-500">Analysis not yet available</p>
         </CardContent>
@@ -30,9 +39,13 @@ export function PhotoAnalysisCard({ photo }: PhotoAnalysisCardProps) {
     <Card className="w-full">
       <CardHeader>
         <img
-          src={photo.photoUrl}
+          src={imageUrl}
           alt="Profile photo"
           className="w-full h-48 object-cover rounded-lg mb-4"
+          onError={(e) => {
+            console.error('Failed to load image:', photo.photoUrl);
+            e.currentTarget.src = 'https://placehold.co/400x300?text=Photo';
+          }}
         />
         <CardTitle className="flex items-center justify-between">
           <span>Photo Quality</span>
