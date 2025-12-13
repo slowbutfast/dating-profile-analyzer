@@ -29,7 +29,7 @@ export function AnalysisSummary({ photos }: AnalysisSummaryProps) {
   );
 
   const photosWithSmile = photosWithAnalysis.filter(p => 
-    p.analysis?.smile.hasSmile
+    p.analysis?.smile.confidence && p.analysis.smile.confidence !== 'neutral' && p.analysis.smile.confidence !== 'no-face'
   ).length;
 
   const photosWithFace = photosWithAnalysis.filter(p => 
