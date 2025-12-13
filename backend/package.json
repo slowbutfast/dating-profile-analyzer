@@ -12,6 +12,10 @@
     "test:ui": "playwright test --ui",
     "test:report": "playwright show-report",
     "test:unit": "ts-node-dev src/utils/__tests__/imageAnalysis.test.ts"
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:llm": "ts-node-dev test-llm.ts"
   },
   "keywords": [],
   "author": "",
@@ -30,16 +34,21 @@
     "multer": "^1.4.5-lts.1",
     "openai": "^4.28.0",
     "sharp": "^0.34.5",
+    "uuid": "^13.0.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
+    "@testing-library/react": "^16.3.0",
     "@types/connect": "^3.4.38",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/multer": "^1.4.11",
     "@types/node": "^20.11.19",
+    "@vitest/ui": "^4.0.15",
+    "happy-dom": "^20.0.11",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.0.15"
   }
 }
