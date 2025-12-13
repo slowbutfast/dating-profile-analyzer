@@ -7,6 +7,7 @@ import uploadRoutes from './routes/upload';
 import textAnalysisRoutes from './routes/textAnalysis';
 import imageAnalysisRoutes from './routes/imageAnalysis';
 import testRoutes from './routes/testRoutes';
+import mockProfileRoutes from './routes/mockProfile';
 import { verifyAuth } from './middleware/auth';
 
 dotenv.config();
@@ -42,6 +43,9 @@ app.use('/api/analyses', verifyAuth, analysisRoutes);
 app.use('/api/upload', verifyAuth, uploadRoutes);
 app.use('/api/text-analysis', verifyAuth, textAnalysisRoutes);
 app.use('/api/image-analysis', verifyAuth, imageAnalysisRoutes);
+
+// Mock profile routes (for testing - protected)
+app.use('/api/mock-profile', verifyAuth, mockProfileRoutes);
 
 // Health check
 app.get('/api/health', (req: Request, res: Response) => {
