@@ -6,6 +6,7 @@ import analysisRoutes from './routes/analysis';
 import uploadRoutes from './routes/upload';
 import textAnalysisRoutes from './routes/textAnalysis';
 import imageAnalysisRoutes from './routes/imageAnalysis';
+import testRoutes from './routes/testRoutes';
 import mockProfileRoutes from './routes/mockProfile';
 import { verifyAuth } from './middleware/auth';
 
@@ -33,6 +34,9 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'Backend server is running' });
 });
+
+// Test routes (no auth required for testing)
+app.use('/api/test', testRoutes);
 
 // Protected routes (auth required)
 app.use('/api/analyses', verifyAuth, analysisRoutes);
