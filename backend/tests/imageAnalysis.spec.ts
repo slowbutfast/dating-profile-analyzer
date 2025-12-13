@@ -23,9 +23,9 @@ const TEST_IMAGES_DIR = path.resolve(__dirname, '../uploads/profile-photos/PKdwr
 
 // Test images
 const TEST_IMAGES = {
-  smilingWoman: '1765562177966_2_smiling-woman_W6GFOSFAXA.jpg',
-  portrait1: '1765562177962_0_gettyimages-1490616219-612x612.jpg',
-  portrait2: '1765562177964_1_istockphoto-1587604256-612x612.jpg',
+  smilingWoman: '1765581283833_2_smiling-woman_W6GFOSFAXA.jpg',
+  portrait1: '1765581283828_0_gettyimages-1490616219-612x612.jpg',
+  portrait2: '1765581283831_1_istockphoto-1587604256-612x612.jpg',
 };
 
 // Helper to get image path
