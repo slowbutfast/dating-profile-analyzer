@@ -176,77 +176,69 @@ export async function analyzeLighting(imageBuffer: Buffer): Promise<{
     const normalizedContrast = Math.min(100, (stdDev / 70) * 100);
 
     const issues: string[] = [];
-    let score = 100;
+    // Start at 85 instead of 100 - perfect lighting is rare
+    let score = 85;
 
-    // More strict brightness evaluation
+    // Strict brightness evaluation
     // Check for darkness (brightness < 45%)
     if (normalizedBrightness < 45) {
       issues.push('Image is too dark');
-      score -= (45 - normalizedBrightness) * 1.5;
+      score -= (45 - normalizedBrightness) * 2.0;
     }
     
     // Check for slightly dim lighting (45-55%)
     if (normalizedBrightness >= 45 && normalizedBrightness < 55) {
       issues.push('Image could be brighter');
-      score -= (55 - normalizedBrightness) * 0.8;
+      score -= 15 + (55 - normalizedBrightness) * 1.5; // Base penalty + scaled
     }
     
     // Check for overexposure (brightness > 75%)
     if (normalizedBrightness > 75) {
       issues.push('Image is overexposed or too bright');
-      score -= (normalizedBrightness - 75) * 2;
+      score -= (normalizedBrightness - 75) * 2.5;
     }
     
-    // Check for slight overexposure (65-75%)
-    if (normalizedBrightness >= 65 && normalizedBrightness <= 75) {
+    // Check for slight overexposure (68-75%)
+    if (normalizedBrightness >= 68 && normalizedBrightness <= 75) {
       issues.push('Image is slightly bright');
-      score -= (normalizedBrightness - 65) * 0.5;
+      score -= 10 + (normalizedBrightness - 68) * 1.0;
     }
     
-    // More strict contrast evaluation
+    // Strict contrast evaluation
     // Check for very low contrast
     if (normalizedContrast < 30) {
       issues.push('Low contrast - image appears flat');
-      score -= (30 - normalizedContrast) * 1.2;
+      score -= (30 - normalizedContrast) * 1.8;
     }
     
     // Check for moderate low contrast
     if (normalizedContrast >= 30 && normalizedContrast < 40) {
       issues.push('Contrast could be improved');
-      score -= (40 - normalizedContrast) * 0.6;
+      score -= 10 + (40 - normalizedContrast) * 1.0;
     }
     
-    // Check for very high contrast (harsh lighting)
-    if (normalizedContrast > 70) {
-      issues.push('Very high contrast - may indicate harsh lighting');
-      score -= (normalizedContrast - 70) * 0.8;
+    // Check for high contrast (harsh lighting) - only if not very high
+    if (normalizedContrast > 65 && normalizedContrast <= 75) {
+      issues.push('High contrast - may indicate harsh lighting');
+      score -= 12 + (normalizedContrast - 65) * 1.2;
     }
     
-    // Penalize non-ideal brightness ranges more heavily
-    // Ideal brightness is 55-65%
+    // Check for very high contrast
+    if (normalizedContrast > 75) {
+      issues.push('Very high contrast - harsh lighting conditions');
+      score -= 22 + (normalizedContrast - 75) * 1.2; // Combined penalty
+    }
+    
+    // Bonus for ideal brightness range (55-65%)
     if (normalizedBrightness >= 55 && normalizedBrightness <= 65) {
-      // This is the ideal range, small bonus
-      score += 5;
-    } else {
-      // Outside ideal range, apply penalty
-      const idealCenter = 60;
-      const distanceFromIdeal = Math.abs(normalizedBrightness - idealCenter);
-      if (distanceFromIdeal > 10) {
-        score -= (distanceFromIdeal - 10) * 0.3;
-      }
+      // This is the ideal range - give bonus to reach higher scores
+      score += 10;
     }
     
-    // Ideal contrast is 40-60%
+    // Bonus for ideal contrast range (40-60%)
     if (normalizedContrast >= 40 && normalizedContrast <= 60) {
       // This is the ideal range
-      score += 3;
-    } else {
-      // Outside ideal range
-      const idealContrastCenter = 50;
-      const contrastDistance = Math.abs(normalizedContrast - idealContrastCenter);
-      if (contrastDistance > 15) {
-        score -= (contrastDistance - 15) * 0.2;
-      }
+      score += 5;
     }
 
     score = Math.max(0, Math.min(100, score));
