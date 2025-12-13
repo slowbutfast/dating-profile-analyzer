@@ -79,7 +79,7 @@ export function PhotoAnalysisCard({ photo }: PhotoAnalysisCardProps) {
           <div className="text-xs text-gray-500 mt-1 space-y-1">
             <p>Brightness: {analysis.lighting.brightness}/100 • Contrast: {analysis.lighting.contrast}/100</p>
             {analysis.lighting.issues.length > 0 && (
-              <div className="text-orange-600">
+              <div className="text-gray-500">
                 {analysis.lighting.issues.map((issue, i) => (
                   <p key={i}>⚠️ {issue}</p>
                 ))}

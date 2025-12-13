@@ -7,15 +7,14 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test:llm": "ts-node-dev test-llm.ts",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui",
-    "test:report": "playwright show-report",
-    "test:unit": "ts-node-dev src/utils/__tests__/imageAnalysis.test.ts"
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "test:llm": "ts-node-dev test-llm.ts"
+    "test:playwright": "playwright test",
+    "test:playwright:ui": "playwright test --ui",
+    "test:report": "playwright show-report",
+    "test:llm": "ts-node-dev test-llm.ts",
+    "test:unit": "ts-node-dev src/utils/__tests__/imageAnalysis.test.ts"
   },
   "keywords": [],
   "author": "",
